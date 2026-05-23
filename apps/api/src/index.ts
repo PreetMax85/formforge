@@ -1,20 +1,24 @@
-import http from "node:http";
-import { logger } from "@repo/logger";
-import { app as expressApplication } from "./server";
+import './instrument.js'; // Sentry — imported FIRST before all else
 
-import { env } from "./env";
+import { createApp } from './app.js';
+import { env } from './common/config/env.js';
+import { logger } from './common/logger.js';
+import { db } from './common/db/index.js';
+import { tokenBlocklist } from '@repo/db/schema';
+import { lt } from 'drizzle-orm';
 
-async function init() {
+const app = createApp();
+
+// Periodic cleanup of expired token blocklist entries
+setInterval(async () => {
   try {
-    const server = http.createServer(expressApplication);
-    const PORT: number = env.PORT ? +env.PORT : 8000;
-    server.listen(PORT, () => {
-      logger.info(`http server is running on PORT ${PORT}`);
-    });
+    await db.delete(tokenBlocklist).where(lt(tokenBlocklist.expiresAt, new Date()));
   } catch (err) {
-    logger.error(`Error creating http server`, { err });
-    process.exit(1);
+    logger.error({ err }, '[CLEANUP] Token blocklist cleanup failed');
   }
-}
+}, 15 * 60 * 1000);
 
-init();
+app.listen(env.PORT, () => {
+  logger.info(`[API] FormForge running on port ${env.PORT} (${env.NODE_ENV})`);
+  logger.info(`[API] Docs: http://localhost:${env.PORT}/docs`);
+});

@@ -1,19 +1,12 @@
 {
-  "extends": "@repo/typescript-config/node.json",
+  "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-
-    "moduleResolution": "Node",
-    "module": "CommonJS",
-
-    // We don't need these for our final build
-    "declarationMap": false,
     "declaration": false,
+    "declarationMap": false,
     "sourceMap": false
   },
   "include": ["src"],
-  "ts-node": {
-    "swc": true
-  }
+  "exclude": ["node_modules", "dist"]
 }

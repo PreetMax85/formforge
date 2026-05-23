@@ -1,14 +1,15 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ["./src/index.ts"],
-  noExternal: ["@teachyst"], // transpile packages starting with `@teachyst` and their dependencies
-  splitting: false,
-  bundle: true,
-  outDir: "./dist",
+  entry: ['src/index.ts'],
+  format: ['esm'],
+  outDir: 'dist',
   clean: true,
-  env: { IS_SERVER_BUILD: "true" },
-  loader: { ".json": "copy" },
-  minify: true,
+  dts: false,
+  splitting: false,
   sourcemap: false,
+  target: 'es2022',
+  platform: 'node',
+  bundle: true,
+  external: ['@neondatabase/serverless', 'bcrypt'],
 });

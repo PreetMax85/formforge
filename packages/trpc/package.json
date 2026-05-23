@@ -2,17 +2,23 @@
   "name": "@repo/trpc",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --max-warnings 0"
+  },
+  "dependencies": {
+    "@repo/api": "workspace:*",
+    "@trpc/client": "^11.8.1",
+    "@trpc/react-query": "^11.8.1",
+    "zod": "^4.0.0"
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "dotenv-cli": "^11.0.0",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@repo/services": "workspace:*",
-    "@trpc/client": "^11.8.1",
-    "@trpc/server": "^11.8.1",
-    "trpc-to-openapi": "^3.1.0",
-    "zod": "^4.3.5"
   }
 }
