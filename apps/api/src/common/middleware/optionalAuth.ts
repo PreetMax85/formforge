@@ -1,6 +1,9 @@
 import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { db } from '../db/index.js';
+import { tokenBlocklist } from '@repo/db/schema';
+import { eq } from 'drizzle-orm';
 
 interface TokenPayload {
   sub: string;
@@ -9,7 +12,7 @@ interface TokenPayload {
   email: string;
 }
 
-export const optionalAuth: RequestHandler = (req, _res, next) => {
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -20,7 +23,16 @@ export const optionalAuth: RequestHandler = (req, _res, next) => {
     const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as TokenPayload;
 
     if (payload.type === 'access') {
-      (req as unknown as Record<string, TokenPayload | undefined>).user = payload;
+      // Check token blocklist
+      const [blocked] = await db
+        .select()
+        .from(tokenBlocklist)
+        .where(eq(tokenBlocklist.jti, payload.jti))
+        .limit(1);
+
+      if (!blocked) {
+        (req as unknown as Record<string, TokenPayload | undefined>).user = payload;
+      }
     }
   } catch {
     // Silently ignore — this is optional auth

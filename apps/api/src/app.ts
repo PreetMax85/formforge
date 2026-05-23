@@ -48,12 +48,12 @@ export function createApp(): express.Application {
   app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));
 
   // OpenAPI REST adapter
-  app.use('/api/v1', createOpenApiExpressMiddleware({ router: appRouter as any, createContext: createContext as any }));
+  app.use('/api/v1', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
 
   // AWS Application Load Balancer friendly alternative
   // /api path for tRPC — works with both Express and AWS ALB
   // Note: Scalar docs remain on separate path
-  app.use('/api', createOpenApiExpressMiddleware({ router: appRouter as any, createContext: createContext as any }));
+  app.use('/api', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
 
   // OpenAPI spec + Scalar docs
   app.get('/openapi.json', (_req, res) => res.json(openApiDocument));

@@ -20,6 +20,7 @@ export default function SignupPage() {
 
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: (res) => {
+      setIsLoading(false);
       if (res.success && res.data?.accessToken) {
         setAccessToken(res.data.accessToken);
         toast.success(res.message);
@@ -29,6 +30,7 @@ export default function SignupPage() {
       }
     },
     onError: (err) => {
+      setIsLoading(false);
       toast.error(err.message || "Signup failed");
     },
   });
@@ -108,7 +110,7 @@ export default function SignupPage() {
               required
             />
             <p className="text-xs text-[#6b7280]">
-              Must be at least 8 characters with an uppercase letter.
+              Must be at least 8 characters with an uppercase letter and a number.
             </p>
           </div>
 

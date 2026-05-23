@@ -16,7 +16,7 @@ interface TokenPayload {
 }
 
 function generateJti(): string {
-  return createHash('sha256').update(`${Date.now()}-${Math.random()}`).digest('hex').slice(0, 36);
+  return createHash('sha256').update(`${Date.now()}-${crypto.randomUUID()}`).digest('hex').slice(0, 36);
 }
 
 function signAccessToken(payload: Omit<TokenPayload, 'jti' | 'type'>): { token: string; jti: string } {

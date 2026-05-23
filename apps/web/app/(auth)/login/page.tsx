@@ -18,6 +18,7 @@ export default function LoginPage() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: (res) => {
+      setIsLoading(false);
       if (res.success && res.data?.accessToken) {
         setAccessToken(res.data.accessToken);
         toast.success(res.message);
@@ -27,6 +28,7 @@ export default function LoginPage() {
       }
     },
     onError: (err) => {
+      setIsLoading(false);
       toast.error(err.message || "Login failed");
     },
   });

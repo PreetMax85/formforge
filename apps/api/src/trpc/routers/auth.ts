@@ -119,11 +119,14 @@ const authRouter = router({
         throw ApiError.unauthorized('Session expired or not found');
       }
 
-      // Rotate: revoke old session, create new tokens, save new session
-      await revokeSession(refreshToken);
+      // Rotate: create new tokens and save new session BEFORE revoking old one.
+      // This makes rotation more resilient to duplicate requests.
       const tokens = createTokens(payload.sub, payload.email);
       await saveSession(payload.sub, tokens.refresh.token, tokens.refresh.jti, ctx.req.headers['user-agent']);
       setRefreshCookie(ctx.res, tokens.refresh.token);
+
+      // Now safe to revoke the old session
+      await revokeSession(refreshToken);
 
       return {
         success: true as const,

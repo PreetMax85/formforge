@@ -2,7 +2,7 @@ import {
   pgTable, pgEnum, uuid, varchar, text,
   boolean, timestamp, integer,
 } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 export const formVisibilityEnum = pgEnum('form_visibility', ['public', 'unlisted']);
 export const formStatusEnum     = pgEnum('form_status',     ['draft', 'published', 'archived']);

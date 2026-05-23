@@ -1,5 +1,5 @@
-import { db } from './index';
-import { users, forms, fields, responses, responseAnswers } from './schema/index';
+import { db } from './index.js';
+import { users, forms, fields, responses, responseAnswers } from './schema/index.js';
 import { sql } from 'drizzle-orm';
 
 const DEMO_USER = {

@@ -78,14 +78,21 @@ export async function createForm(
   return form;
 }
 
-export async function getFormById(id: string) {
+export async function getFormById(id: string, requesterId?: string) {
   const [form] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!form) throw ApiError.notFound('Form not found');
+  if (requesterId && form.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have access to this form');
+  }
   return form;
 }
 
 export async function getFormBySlug(slug: string) {
-  const [form] = await db.select().from(forms).where(eq(forms.slug, slug)).limit(1);
+  const [form] = await db
+    .select()
+    .from(forms)
+    .where(and(eq(forms.slug, slug), eq(forms.status, 'published')))
+    .limit(1);
   if (!form) throw ApiError.notFound('Form not found');
   return form;
 }
@@ -101,9 +108,13 @@ export async function getFormsByCreator(creatorId: string) {
 export async function updateForm(
   id: string,
   input: Omit<z.infer<typeof UpdateFormSchema>, 'id'>,
+  requesterId: string,
 ) {
   const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!existing) throw ApiError.notFound('Form not found');
+  if (existing.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to update this form');
+  }
 
   const [updated] = await db
     .update(forms)
@@ -124,18 +135,25 @@ export async function updateForm(
     .where(eq(forms.id, id))
     .returning();
 
+  if (!updated) throw ApiError.internal('Failed to update form');
   return updated;
 }
 
-export async function deleteForm(id: string) {
+export async function deleteForm(id: string, requesterId: string) {
   const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!existing) throw ApiError.notFound('Form not found');
+  if (existing.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to delete this form');
+  }
   await db.delete(forms).where(eq(forms.id, id));
 }
 
-export async function publishForm(id: string, visibility: 'public' | 'unlisted') {
+export async function publishForm(id: string, visibility: 'public' | 'unlisted', requesterId: string) {
   const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!existing) throw ApiError.notFound('Form not found');
+  if (existing.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to publish this form');
+  }
 
   const [updated] = await db
     .update(forms)
@@ -148,12 +166,16 @@ export async function publishForm(id: string, visibility: 'public' | 'unlisted')
     .where(eq(forms.id, id))
     .returning();
 
+  if (!updated) throw ApiError.internal('Failed to publish form');
   return updated;
 }
 
-export async function unpublishForm(id: string) {
+export async function unpublishForm(id: string, requesterId: string) {
   const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!existing) throw ApiError.notFound('Form not found');
+  if (existing.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to unpublish this form');
+  }
 
   const [updated] = await db
     .update(forms)
@@ -161,6 +183,7 @@ export async function unpublishForm(id: string) {
     .where(eq(forms.id, id))
     .returning();
 
+  if (!updated) throw ApiError.internal('Failed to unpublish form');
   return updated;
 }
 
@@ -194,7 +217,7 @@ export async function exploreForms(
 
   const hasMore = items.length > opts.limit;
   const trimmed = hasMore ? items.slice(0, opts.limit) : items;
-  const nextCursor = hasMore ? trimmed[trimmed.length - 1].id : null;
+  const nextCursor = hasMore ? trimmed[trimmed.length - 1]!.id : null;
 
   return { items: trimmed, nextCursor };
 }
