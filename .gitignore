@@ -38,5 +38,7 @@ yarn-error.log*
 *.pem
 ARCHITECTURE.md
 AGENTS.md
+context.txt
 .vscode
 
+packages/db/migrations/meta/

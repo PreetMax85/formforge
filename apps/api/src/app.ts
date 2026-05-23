@@ -19,6 +19,7 @@ import {
   apiWriteLimiter,
   passwordResetLimiter,
 } from './common/middleware/rateLimit.js';
+import { optionalAuth } from './common/middleware/optionalAuth.js';
 import { sql } from 'drizzle-orm';
 import * as Sentry from '@sentry/node';
 
@@ -40,6 +41,8 @@ export function createApp(): express.Application {
   app.use('/api/auth/signup',          apiWriteLimiter);
   app.use('/api/auth/forgot-password', passwordResetLimiter);
   app.use('/api/auth/reset-password',  passwordResetLimiter);
+
+  app.use(optionalAuth);
 
   // tRPC internal endpoint
   app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));

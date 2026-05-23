@@ -2,7 +2,7 @@ import {
   pgTable, pgEnum, uuid, varchar, text,
   boolean, integer, jsonb, timestamp,
 } from 'drizzle-orm/pg-core';
-import { forms } from './forms.js';
+import { forms } from './forms';
 
 export const fieldTypeEnum = pgEnum('field_type', [
   'short_text', 'long_text', 'email', 'number',

@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
 import { db } from '../../common/db/index.js';
-import { users, sessions } from '@repo/db/schema';
+import { users, sessions, tokenBlocklist } from '@repo/db/schema';
 import { eq } from 'drizzle-orm';
 import { env } from '../../common/config/env.js';
 import { AUTH_CONSTANTS } from './auth.constants.js';
@@ -88,4 +88,21 @@ export async function saveSession(
 export async function revokeSession(refreshToken: string) {
   const hashed = createHash('sha256').update(refreshToken).digest('hex');
   await db.delete(sessions).where(eq(sessions.refreshToken, hashed));
+}
+
+export function verifyRefreshToken(token: string): TokenPayload {
+  return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
+}
+
+export async function findSessionByHash(hashedToken: string) {
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.refreshToken, hashedToken))
+    .limit(1);
+  return session ?? null;
+}
+
+export async function blockToken(jti: string, expiresAt: Date) {
+  await db.insert(tokenBlocklist).values({ jti, expiresAt }).onConflictDoNothing();
 }

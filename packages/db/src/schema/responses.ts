@@ -2,7 +2,7 @@ import {
   pgTable, uuid, varchar, text,
   boolean, timestamp,
 } from 'drizzle-orm/pg-core';
-import { forms } from './forms.js';
+import { forms } from './forms';
 
 export const responses = pgTable('responses', {
   id:                      uuid('id').defaultRandom().primaryKey(),

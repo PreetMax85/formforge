@@ -6,6 +6,7 @@ const responsesRouter = router({
   submit: publicProcedure
     .meta({ openapi: { method: 'POST', path: '/responses/submit' } })
     .input(SubmitResponseSchema)
+    .output(z.any())
     .mutation(async ({ input }) => {
       return { success: true, message: 'Response submitted — scaffolded', data: { duplicate: false } };
     }),

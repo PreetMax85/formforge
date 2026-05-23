@@ -8,12 +8,13 @@ declare global {
   }
 }
 
-export async function createContext({ req }: CreateExpressContextOptions) {
+export async function createContext({ req, res }: CreateExpressContextOptions) {
   const user = req.user;
 
   return {
     user,
     req,
+    res,
   };
 }
 
