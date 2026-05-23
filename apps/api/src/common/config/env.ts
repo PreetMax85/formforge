@@ -13,6 +13,7 @@ const envSchema = z.object({
   SENTRY_DSN:             z.string().url().optional(),
   TURNSTILE_SECRET_KEY:   z.string().optional(),
   TURNSTILE_ENABLED:      z.coerce.boolean().default(false),
+  COOKIE_DOMAIN:          z.string().optional(),
 });
 
 const result = envSchema.safeParse(process.env);

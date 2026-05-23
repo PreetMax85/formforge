@@ -42,6 +42,10 @@ export function createApp(): express.Application {
   app.use('/api/auth/forgot-password', passwordResetLimiter);
   app.use('/api/auth/reset-password',  passwordResetLimiter);
 
+  // tRPC auth endpoints also need write-rate limits
+  app.use('/trpc/auth.login',  apiWriteLimiter);
+  app.use('/trpc/auth.signup', apiWriteLimiter);
+
   app.use(optionalAuth);
 
   // tRPC internal endpoint

@@ -30,8 +30,18 @@ const formObjectSchema = z.object({
   status: z.enum(['draft', 'published', 'archived']),
   visibility: z.enum(['public', 'unlisted']),
   theme: z.string(),
+  allowAnonymous: z.boolean(),
+  requireEmail: z.boolean(),
+  showProgressBar: z.boolean(),
+  notifyCreator: z.boolean(),
   responseCount: z.number(),
   viewCount: z.number(),
+  thankYouTitle: z.string().nullable(),
+  thankYouMessage: z.string().nullable(),
+  maxResponses: z.number().nullable(),
+  expiresAt: z.coerce.date().nullable(),
+  passwordHash: z.string().nullable(),
+  publishedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -147,7 +157,8 @@ const formsRouter = router({
   exportCsv: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .output(successEnvelope(z.string()))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      await getFormById(input.id, ctx.user.sub);
       return { success: true as const, message: 'CSV export — scaffolded', data: '' };
     }),
 });

@@ -106,3 +106,15 @@ export async function findSessionByHash(hashedToken: string) {
 export async function blockToken(jti: string, expiresAt: Date) {
   await db.insert(tokenBlocklist).values({ jti, expiresAt }).onConflictDoNothing();
 }
+
+export async function validateSession(refreshToken: string) {
+  const payload = verifyRefreshToken(refreshToken);
+  if (payload.type !== 'refresh') throw ApiError.unauthorized('Invalid token type');
+
+  const hashed = createHash('sha256').update(refreshToken).digest('hex');
+  const session = await findSessionByHash(hashed);
+  if (!session || session.expiresAt < new Date()) {
+    throw ApiError.unauthorized('Session expired or not found');
+  }
+  return payload;
+}

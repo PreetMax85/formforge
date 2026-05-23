@@ -155,7 +155,7 @@ async function seed() {
   for (let i = 0; i < totalResponses && count < totalResponses; i++) {
     const formIndex = i % 3;
     let formId: string;
-    let fieldSet: any[];
+    let fieldSet: Array<{ id: string }>;
     let answers: Record<string, string | string[]> = {};
 
     if (formIndex === 0) {

@@ -11,9 +11,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  // Forward cookies to API to validate the refresh token
+  // Validate session without rotating the refresh token.
+  // auth.validate does not revoke or create new cookies — safe for SSR.
   try {
-    const res = await fetch(`${API_URL}/trpc/auth.refresh`, {
+    const res = await fetch(`${API_URL}/trpc/auth.validate`, {
       method: 'GET',
       headers: {
         Cookie: `refresh_token=${refreshToken.value}`,

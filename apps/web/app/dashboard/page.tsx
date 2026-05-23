@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
       {forms.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {forms.map((form: any) => (
+          {forms.map((form) => (
             <div
               key={form.id}
               className="border border-[#2a2a2a] bg-[#141414] p-4 hover:border-[#569cd6]/40 transition-colors cursor-pointer"

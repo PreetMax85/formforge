@@ -116,6 +116,10 @@ export async function updateForm(
     throw ApiError.forbidden('You do not have permission to update this form');
   }
 
+  if (input.slug !== undefined && input.slug !== existing.slug) {
+    await checkSlugAvailability(input.slug);
+  }
+
   const [updated] = await db
     .update(forms)
     .set({

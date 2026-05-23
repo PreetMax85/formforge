@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Response, CookieOptions } from 'express';
 import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 import { SignupSchema, LoginSchema } from '@repo/shared';
 import {
@@ -10,28 +10,38 @@ import {
   verifyRefreshToken,
   findSessionByHash,
   blockToken,
+  validateSession,
 } from '../../modules/auth/auth.service.js';
 import { AUTH_CONSTANTS } from '../../modules/auth/auth.constants.js';
 import { ApiError } from '@repo/shared';
+import { env } from '../../common/config/env.js';
 import { createHash } from 'crypto';
 
 function setRefreshCookie(res: Response, token: string) {
-  res.cookie(AUTH_CONSTANTS.REFRESH_COOKIE_NAME, token, {
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  };
+  if (env.COOKIE_DOMAIN) {
+    cookieOptions.domain = env.COOKIE_DOMAIN;
+  }
+  res.cookie(AUTH_CONSTANTS.REFRESH_COOKIE_NAME, token, cookieOptions);
 }
 
 function clearRefreshCookie(res: Response) {
-  res.clearCookie(AUTH_CONSTANTS.REFRESH_COOKIE_NAME, {
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-  });
+  };
+  if (env.COOKIE_DOMAIN) {
+    cookieOptions.domain = env.COOKIE_DOMAIN;
+  }
+  res.clearCookie(AUTH_CONSTANTS.REFRESH_COOKIE_NAME, cookieOptions);
 }
 
 const authRouter = router({
@@ -143,6 +153,21 @@ const authRouter = router({
         success: true as const,
         message: 'Current user',
         data: ctx.user,
+      };
+    }),
+
+  validate: publicProcedure
+    .query(async ({ ctx }) => {
+      const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
+      if (!refreshToken) {
+        throw ApiError.unauthorized('No refresh token provided');
+      }
+
+      const payload = await validateSession(refreshToken);
+      return {
+        success: true as const,
+        message: 'Session valid',
+        data: { sub: payload.sub, email: payload.email },
       };
     }),
 });
