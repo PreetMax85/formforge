@@ -1,5 +1,8 @@
 import { pgTable, uuid, varchar, text, boolean, timestamp } from 'drizzle-orm/pg-core';
 
+// isAdmin: DB column exists as architectural intent.
+// No /admin routes, no requireAdmin middleware, no runtime checks.
+// The column demonstrates forward-thinking schema design only.
 export const users = pgTable('users', {
   id:           uuid('id').defaultRandom().primaryKey(),
   email:        varchar('email', { length: 255 }).notNull().unique(),
