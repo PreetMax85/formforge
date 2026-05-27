@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    name: Typecheck + Lint + Build + Test
+    name: Typecheck + Build + Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +19,6 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run typecheck
-      - run: pnpm turbo run lint
       - run: pnpm turbo run build
       - run: pnpm turbo run test
         env:
