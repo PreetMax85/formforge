@@ -21,7 +21,7 @@ export type FormStatus = (typeof FORM_STATUSES)[number];
 
 export const THEME_META: Record<string, { label: string; color: string; bg: string }> = {
   default:               { label: 'Default',             color: '#9ca3af', bg: 'rgba(156,163,175,0.1)'  },
-  'ghost-of-tsushima':   { label: 'Ghost of Tsushima', color: '#c8860a', bg: 'rgba(200,134,10,0.1)'   },
+  'ghost-of-tsushima':   { label: 'Ghost of Tsushima', color: '#C68B9D', bg: 'rgba(198,139,157,0.1)' },
   'jujutsu-kaisen':      { label: 'Jujutsu Kaisen',    color: '#7c3aed', bg: 'rgba(124,58,237,0.1)'   },
   'karan-aujla-concert': { label: 'Karan Aujla',       color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'   },
   cyberpunk:             { label: 'Cyberpunk',          color: '#ff2d78', bg: 'rgba(255,45,120,0.1)'   },

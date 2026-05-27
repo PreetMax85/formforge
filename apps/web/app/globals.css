@@ -177,15 +177,15 @@
 /* ── Public form themes — applied via data-theme on /f/[slug] wrapper ── */
 
 [data-theme="ghost-of-tsushima"] {
-  --bg-primary:    #1a1208;
-  --bg-secondary:  #2d1f0e;
-  --bg-tertiary:   #3d2d15;
-  --border:        #4a3520;
-  --border-subtle: #2d1f0e;
-  --text-primary:  #f5deb3;
-  --text-secondary:#c4a882;
-  --text-accent:   #c8860a;
-  --accent:        #c8860a;
+  --bg-primary:    #1C1C1C;
+  --bg-secondary:  #2A2A2A;
+  --bg-tertiary:   #333333;
+  --border:        #4A4A4A;
+  --border-subtle: #2A2A2A;
+  --text-primary:  #EBE8E8;
+  --text-secondary:#D1C7A9;
+  --text-accent:   #C68B9D;
+  --accent:        #C68B9D;
 }
 
 [data-theme="jujutsu-kaisen"] {

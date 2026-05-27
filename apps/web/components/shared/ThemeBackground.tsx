@@ -175,7 +175,7 @@ function JJKParticles() {
 }
 
 /* ── Ghost of Tsushima: CSS sakura petals ───────────────────────────── */
-type PetalColor = "#f9b4c2" | "#e8919e" | "#fcc6d0";
+type PetalColor = "#C68B9D" | "#b87a8d" | "#d9a3b3";
 type PetalShape = "50% 0 50% 0" | "0 50% 0 50%";
 
 interface PetalConfig {
@@ -188,30 +188,30 @@ interface PetalConfig {
 }
 
 const PETAL_CONFIGS: PetalConfig[] = [
-  { left: "2%",  delay: "0s",    duration: "9s",   size: "8px",  color: "#f9b4c2", shape: "50% 0 50% 0" },
-  { left: "6%",  delay: "4.2s",  duration: "11s",  size: "5px",  color: "#e8919e", shape: "0 50% 0 50%" },
-  { left: "11%", delay: "1.5s",  duration: "8s",   size: "10px", color: "#f9b4c2", shape: "50% 0 50% 0" },
-  { left: "17%", delay: "3.0s",  duration: "12s",  size: "6px",  color: "#fcc6d0", shape: "50% 0 50% 0" },
-  { left: "22%", delay: "0.6s",  duration: "7s",   size: "9px",  color: "#e8919e", shape: "0 50% 0 50%" },
-  { left: "28%", delay: "2.4s",  duration: "10s",  size: "4px",  color: "#f9b4c2", shape: "50% 0 50% 0" },
-  { left: "33%", delay: "4.8s",  duration: "13s",  size: "7px",  color: "#fcc6d0", shape: "0 50% 0 50%" },
-  { left: "38%", delay: "1.1s",  duration: "8.5s", size: "11px", color: "#f9b4c2", shape: "50% 0 50% 0" },
-  { left: "44%", delay: "3.6s",  duration: "7.5s", size: "5px",  color: "#e8919e", shape: "50% 0 50% 0" },
-  { left: "50%", delay: "0.3s",  duration: "9.5s", size: "8px",  color: "#f9b4c2", shape: "0 50% 0 50%" },
-  { left: "55%", delay: "2.8s",  duration: "11s",  size: "14px", color: "#fcc6d0", shape: "50% 0 50% 0" },
-  { left: "60%", delay: "5.0s",  duration: "7s",   size: "6px",  color: "#e8919e", shape: "50% 0 50% 0" },
-  { left: "65%", delay: "1.8s",  duration: "10s",  size: "9px",  color: "#f9b4c2", shape: "0 50% 0 50%" },
-  { left: "70%", delay: "3.5s",  duration: "8s",   size: "4px",  color: "#fcc6d0", shape: "50% 0 50% 0" },
-  { left: "75%", delay: "0.9s",  duration: "12s",  size: "7px",  color: "#e8919e", shape: "50% 0 50% 0" },
-  { left: "80%", delay: "4.5s",  duration: "9s",   size: "11px", color: "#f9b4c2", shape: "0 50% 0 50%" },
-  { left: "85%", delay: "2.0s",  duration: "6.5s", size: "5px",  color: "#fcc6d0", shape: "50% 0 50% 0" },
-  { left: "89%", delay: "3.8s",  duration: "10.5s",size: "8px",  color: "#e8919e", shape: "0 50% 0 50%" },
-  { left: "93%", delay: "1.3s",  duration: "8.5s", size: "10px", color: "#f9b4c2", shape: "50% 0 50% 0" },
-  { left: "97%", delay: "4.0s",  duration: "11s",  size: "6px",  color: "#fcc6d0", shape: "0 50% 0 50%" },
-  { left: "4%",  delay: "2.5s",  duration: "14s",  size: "4px",  color: "#e8919e", shape: "50% 0 50% 0" },
-  { left: "20%", delay: "5.2s",  duration: "9s",   size: "8px",  color: "#f9b4c2", shape: "0 50% 0 50%" },
-  { left: "48%", delay: "3.3s",  duration: "7.5s", size: "6px",  color: "#fcc6d0", shape: "50% 0 50% 0" },
-  { left: "72%", delay: "0.7s",  duration: "13s",  size: "5px",  color: "#e8919e", shape: "0 50% 0 50%" },
+  { left: "2%",  delay: "0s",    duration: "9s",   size: "8px",  color: "#C68B9D", shape: "50% 0 50% 0" },
+  { left: "6%",  delay: "4.2s",  duration: "11s",  size: "5px",  color: "#b87a8d", shape: "0 50% 0 50%" },
+  { left: "11%", delay: "1.5s",  duration: "8s",   size: "10px", color: "#C68B9D", shape: "50% 0 50% 0" },
+  { left: "17%", delay: "3.0s",  duration: "12s",  size: "6px",  color: "#d9a3b3", shape: "50% 0 50% 0" },
+  { left: "22%", delay: "0.6s",  duration: "7s",   size: "9px",  color: "#b87a8d", shape: "0 50% 0 50%" },
+  { left: "28%", delay: "2.4s",  duration: "10s",  size: "4px",  color: "#C68B9D", shape: "50% 0 50% 0" },
+  { left: "33%", delay: "4.8s",  duration: "13s",  size: "7px",  color: "#d9a3b3", shape: "0 50% 0 50%" },
+  { left: "38%", delay: "1.1s",  duration: "8.5s", size: "11px", color: "#C68B9D", shape: "50% 0 50% 0" },
+  { left: "44%", delay: "3.6s",  duration: "7.5s", size: "5px",  color: "#b87a8d", shape: "50% 0 50% 0" },
+  { left: "50%", delay: "0.3s",  duration: "9.5s", size: "8px",  color: "#C68B9D", shape: "0 50% 0 50%" },
+  { left: "55%", delay: "2.8s",  duration: "11s",  size: "14px", color: "#d9a3b3", shape: "50% 0 50% 0" },
+  { left: "60%", delay: "5.0s",  duration: "7s",   size: "6px",  color: "#b87a8d", shape: "50% 0 50% 0" },
+  { left: "65%", delay: "1.8s",  duration: "10s",  size: "9px",  color: "#C68B9D", shape: "0 50% 0 50%" },
+  { left: "70%", delay: "3.5s",  duration: "8s",   size: "4px",  color: "#d9a3b3", shape: "50% 0 50% 0" },
+  { left: "75%", delay: "0.9s",  duration: "12s",  size: "7px",  color: "#b87a8d", shape: "50% 0 50% 0" },
+  { left: "80%", delay: "4.5s",  duration: "9s",   size: "11px", color: "#C68B9D", shape: "0 50% 0 50%" },
+  { left: "85%", delay: "2.0s",  duration: "6.5s", size: "5px",  color: "#d9a3b3", shape: "50% 0 50% 0" },
+  { left: "89%", delay: "3.8s",  duration: "10.5s",size: "8px",  color: "#b87a8d", shape: "0 50% 0 50%" },
+  { left: "93%", delay: "1.3s",  duration: "8.5s", size: "10px", color: "#C68B9D", shape: "50% 0 50% 0" },
+  { left: "97%", delay: "4.0s",  duration: "11s",  size: "6px",  color: "#d9a3b3", shape: "0 50% 0 50%" },
+  { left: "4%",  delay: "2.5s",  duration: "14s",  size: "4px",  color: "#b87a8d", shape: "50% 0 50% 0" },
+  { left: "20%", delay: "5.2s",  duration: "9s",   size: "8px",  color: "#C68B9D", shape: "0 50% 0 50%" },
+  { left: "48%", delay: "3.3s",  duration: "7.5s", size: "6px",  color: "#d9a3b3", shape: "50% 0 50% 0" },
+  { left: "72%", delay: "0.7s",  duration: "13s",  size: "5px",  color: "#b87a8d", shape: "0 50% 0 50%" },
 ];
 
 function SakuraPetals() {
@@ -239,7 +239,7 @@ function SakuraPetals() {
             opacity: 0,
             animation: `petal-fall ${cfg.duration} ${cfg.delay} infinite linear,
                          petal-sway ${cfg.duration} ${cfg.delay} infinite ease-in-out`,
-            boxShadow: `0 0 ${cfg.size === "14px" || cfg.size === "11px" ? "6" : "4"}px rgba(200,134,10,0.3)`,
+            boxShadow: `0 0 ${cfg.size === "14px" || cfg.size === "11px" ? "6" : "4"}px rgba(198,139,157,0.3)`,
           }}
         />
       ))}
