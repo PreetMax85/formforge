@@ -58,7 +58,7 @@ describe('validateResponseAnswers', () => {
       [requiredShortText, emailField, numberField],
       [
         { fieldId: 'f-name',   value: 'Preet'                },
-        { fieldId: 'f-email',  value: 'preet@formforge.tech' },
+        { fieldId: 'f-email',  value: 'preet@formforge.jdevs.codes' },
         { fieldId: 'f-number', value: '27'                   },
       ],
     );

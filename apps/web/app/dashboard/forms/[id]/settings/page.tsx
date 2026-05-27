@@ -291,7 +291,7 @@ export default function FormSettingsPage({
           />
         </FieldRow>
 
-        <FieldRow label="URL Slug" hint="formforge.tech/f/[slug] — lowercase letters, numbers, hyphens only.">
+        <FieldRow label="URL Slug" hint="formforge.jdevs.codes/f/[slug] — lowercase letters, numbers, hyphens only.">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
             <span
               style={{

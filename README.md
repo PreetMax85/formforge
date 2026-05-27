@@ -21,10 +21,8 @@ through a Game Engine Inspector interface.
 
 | | |
 |---|---|
-| Demo login | `demo@formforge.tech` |
+| Demo login | `demo@formforge.jdevs.codes` |
 | Demo password | `Demo@FormForge2026` |
-| Admin login | `admin@formforge.tech` |
-| Admin password | `Admin@FormForge2026` |
 
 ---
 

@@ -20,7 +20,7 @@ interface ResponseCopyOpts {
 export async function sendResponseReceived(opts: ResponseReceivedOpts) {
   if (!resend) return;
   return resend.emails.send({
-    from:    'FormForge <noreply@formforge.tech>',
+    from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.creatorEmail,
     subject: `New response on "${opts.formTitle}"`,
     text:    `New response from ${opts.respondentName ?? 'Anonymous'} on "${opts.formTitle}". View responses: ${opts.formUrl}`,
@@ -31,7 +31,7 @@ export async function sendResponseCopy(opts: ResponseCopyOpts) {
   if (!resend) return;
   const answerList = opts.answers.map(a => `${a.label}: ${a.value}`).join('\n');
   return resend.emails.send({
-    from:    'FormForge <noreply@formforge.tech>',
+    from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.respondentEmail,
     subject: `Your response to "${opts.formTitle}"`,
     text:    `Thank you for your response!\n\n${answerList}`,

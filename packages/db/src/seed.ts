@@ -5,15 +5,8 @@ import bcrypt from 'bcrypt';
 
 const DEMO_USER = {
   id: '00000000-0000-4000-8000-000000000001',
-  email: 'demo@formforge.tech',
+  email: 'demo@formforge.jdevs.codes',
   name: 'Demo Creator',
-  // bcrypt.hashSync('Demo@FormForge2026', 12)
-};
-
-const ADMIN_USER = {
-  id: '00000000-0000-4000-8000-000000000002',
-  email: 'admin@formforge.tech',
-  name: 'FormForge Admin',
 };
 
 const SAMURAI_FORM = {
@@ -35,7 +28,7 @@ const AUJLA_FORM = {
 };
 
 const DEMO_FORM_SLUGS = [SAMURAI_FORM.slug, JJK_FORM.slug, AUJLA_FORM.slug];
-const DEMO_USER_EMAILS = [DEMO_USER.email, ADMIN_USER.email];
+const DEMO_USER_EMAILS = [DEMO_USER.email];
 
 async function seed() {
   console.log('[SEED] Starting idempotent seed...');
@@ -47,7 +40,6 @@ async function seed() {
   // Users — hash passwords with bcrypt so login works
   await db.insert(users).values([
     { ...DEMO_USER, passwordHash: await bcrypt.hash('Demo@FormForge2026', 12) },
-    { ...ADMIN_USER, passwordHash: await bcrypt.hash('Admin@FormForge2026', 12) },
   ]).onConflictDoNothing();
   console.log('[SEED] Users seeded');
 

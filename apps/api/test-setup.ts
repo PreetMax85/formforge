@@ -5,5 +5,5 @@
 process.env.DATABASE_URL       ??= 'postgresql://stub:stub@stub/stub';
 process.env.JWT_ACCESS_SECRET  ??= 'stub-secret-minimum-thirty-two-characters-xx';
 process.env.JWT_REFRESH_SECRET ??= 'stub-secret-minimum-thirty-two-characters-xx';
-process.env.APP_URL            ??= 'https://formforge.tech';
+process.env.APP_URL            ??= 'https://formforge.jdevs.codes';
 process.env.RESEND_API_KEY     ??= '';

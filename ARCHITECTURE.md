@@ -10,8 +10,7 @@
 | API |  |
 | Docs |  |
 | Explore |  |
-| Demo login | demo@formforge / Demo@FormForge2026 |
-| Admin login | admin@formforge / Admin@FormForge2026 |
+| Demo credentials | See README.md |
 
 ---
 
@@ -594,7 +593,7 @@ export type AppRouter = typeof appRouter;
 export const openApiDocument = generateOpenApiDocument(appRouter, {
   title:       'FormForge API',
   version:     '1.0.0',
-  baseUrl:     'https://api.formforge.tech',
+  baseUrl:     'https://api.formforge.jdevs.codes',
   description: 'FormForge public API — form retrieval and submission',
   tags:        ['forms', 'responses'],
 });
@@ -1390,7 +1389,7 @@ const NAVBAR = {
   links: [
     { label: 'Explore',  href: '/explore' },
     { label: 'Pricing',  href: '/pricing' },
-    { label: 'Docs',     href: 'https://api.formforge.tech/docs' },
+    { label: 'Docs',     href: 'https://api.formforge.jdevs.codes/docs' },
   ],
   cta: {
     secondary: { label: 'Log in',          href: '/login'  },
@@ -1785,14 +1784,7 @@ Center:
   - Built with     → ChaiCode Hackathon 2025
 
 Right:
-  Demo Credentials
-  ┌─────────────────────────────────┐
-  │  demo@formforge.tech            │
-  │  Demo@FormForge2026             │
-  └─────────────────────────────────┘
-  [copy to clipboard] button on each — purely frontend
-
-  Small text below: "Admin: admin@formforge.tech"
+  Demo Credentials — see README.md for current credentials.
 
 Bottom bar:
 "FormForge · ChaiCode Hackathon 2025 · Built by Preet"
@@ -1808,11 +1800,6 @@ const FOOTER = {
   hackathon: [
     { label: 'GitHub',        href: 'https://github.com/PreetMax85/formforge' },
   ],
-  demo: {
-    email:    'demo@formforge.tech',
-    password: 'Demo@FormForge2026',
-    admin:    'admin@formforge.tech',
-  },
   credit: 'FormForge · ChaiCode Hackathon 2025 · Built by Preet',
 } as const;
 
@@ -2301,7 +2288,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendResponseReceived(opts: ResponseReceivedOpts) {
   return resend.emails.send({
-    from:    'FormForge <noreply@formforge.tech>',
+    from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.creatorEmail,
     subject: `New response on "${opts.formTitle}"`,
     react:   ResponseReceived(opts),
@@ -2310,7 +2297,7 @@ export async function sendResponseReceived(opts: ResponseReceivedOpts) {
 
 export async function sendResponseCopy(opts: ResponseCopyOpts) {
   return resend.emails.send({
-    from:    'FormForge <noreply@formforge.tech>',
+    from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.respondentEmail,
     subject: `Your response to "${opts.formTitle}"`,
     react:   ResponseCopy(opts),
@@ -2329,15 +2316,11 @@ export async function sendResponseCopy(opts: ResponseCopyOpts) {
 // Run with: pnpm db:seed
 // Requires: "type": "module" in packages/db/package.json
 
-const DEMO_USER  = { id: '00000000-0000-0000-0000-000000000001',
-  email: 'demo@formforge.tech',  name: 'Demo Creator',
+const DEMO_USER = { id: '00000000-0000-0000-0000-000000000001',
+  email: 'demo@formforge.jdevs.codes', name: 'Demo Creator',
   passwordHash: await bcrypt.hash('Demo@FormForge2026', 12), isAdmin: false };
 
-const ADMIN_USER = { id: '00000000-0000-0000-0000-000000000002',
-  email: 'admin@formforge.tech', name: 'FormForge Admin',
-  passwordHash: await bcrypt.hash('Admin@FormForge2026', 12), isAdmin: true };
-
-await db.insert(users).values([DEMO_USER, ADMIN_USER]).onConflictDoNothing();
+await db.insert(users).values([DEMO_USER]).onConflictDoNothing();
 // Then forms → fields → responses → response_answers with onConflictDoNothing()
 // Seed responses in batches of 50 to avoid Neon connection limits
 ```
@@ -2533,15 +2516,15 @@ JWT_ACCESS_SECRET=<random-min-32-chars>
 JWT_REFRESH_SECRET=<random-min-32-chars>
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
-APP_URL=https://formforge.tech
+APP_URL=https://formforge.jdevs.codes
 RESEND_API_KEY=re_...
 SENTRY_DSN=https://...@sentry.io/...
 TURNSTILE_SECRET_KEY=...
 TURNSTILE_ENABLED=true
 
 # apps/web/.env.local (NEVER committed)
-API_URL=https://api.formforge.tech          ← server-side only, NO NEXT_PUBLIC
-NEXT_PUBLIC_API_URL=https://api.formforge.tech
+API_URL=https://api.formforge.jdevs.codes          ← server-side only, NO NEXT_PUBLIC
+NEXT_PUBLIC_API_URL=https://api.formforge.jdevs.codes
 NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 SENTRY_AUTH_TOKEN=...
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=...
@@ -2575,7 +2558,7 @@ jobs:
           DATABASE_URL: postgresql://stub:stub@stub/stub
           JWT_ACCESS_SECRET: stub-secret-minimum-thirty-two-characters-xx
           JWT_REFRESH_SECRET: stub-secret-minimum-thirty-two-characters-xx
-          APP_URL: https://formforge.tech
+          APP_URL: https://formforge.jdevs.codes
           RESEND_API_KEY: re_stub
 ```
 
@@ -2894,7 +2877,7 @@ describe('validateResponseAnswers — Response submission validation', () => {
       ],
       [
         { fieldId: 'f1', value: 'Preet' },
-        { fieldId: 'f2', value: 'preet@formforge.tech' },
+        { fieldId: 'f2', value: 'preet@formforge.jdevs.codes' },
       ]
     );
     expect(result.success).toBe(true);
