@@ -24,4 +24,4 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["npx", "tsx", "apps/api/src/index.ts"]
+CMD ["node", "--import", "tsx", "apps/api/src/index.ts"]
