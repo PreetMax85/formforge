@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { toast } from "sonner";
+import AuthShell from "../_components/AuthShell";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function SignupPage() {
       toast.error("Please fill in all fields");
       return;
     }
-    if (!email.includes('@')) {
+    if (!email.includes("@")) {
       toast.error("Please enter a valid email address");
       return;
     }
@@ -55,100 +56,203 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="bg-[#0e0e0e] text-[#d4d4d4] min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md border border-[#2a2a2a] bg-[#141414] p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
-            Create your account
-          </h1>
-          <p className="text-[#9ca3af] mt-2 text-sm">
-            Start building forms in seconds.
+    <AuthShell
+      title="FormForge.Auth.Signup"
+      footer={
+        <>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize:   "11px",
+              color:      "#4b5563",
+            }}
+          >
+            Have an account?
+          </span>
+          <Link
+            href="/login"
+            style={{
+              fontFamily:     "var(--font-mono)",
+              fontSize:       "11px",
+              color:          "#569cd6",
+              textDecoration: "none",
+              letterSpacing:  "0.05em",
+            }}
+          >
+            login →
+          </Link>
+        </>
+      }
+    >
+      {/* Title */}
+      <div style={{ marginBottom: "24px" }}>
+        <h1
+          style={{
+            fontFamily:    "var(--font-display)",
+            fontSize:      "22px",
+            fontWeight:    700,
+            color:         "#d4d4d4",
+            margin:        0,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Instantiate account
+        </h1>
+        <p
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontSize:   "13px",
+            color:      "#6b7280",
+            margin:     "6px 0 0",
+          }}
+        >
+          One form away from the builder.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        {/* Name */}
+        <div style={{ marginBottom: "14px" }}>
+          <Label
+            htmlFor="name"
+            style={{
+              fontFamily:    "var(--font-mono)",
+              fontSize:      "10px",
+              color:         "#9ca3af",
+              letterSpacing: "0.08em",
+              display:       "block",
+              marginBottom:  "6px",
+            }}
+          >
+            DISPLAY_NAME
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
+            required
+          />
+        </div>
+
+        {/* Email */}
+        <div style={{ marginBottom: "14px" }}>
+          <Label
+            htmlFor="email"
+            style={{
+              fontFamily:    "var(--font-mono)",
+              fontSize:      "10px",
+              color:         "#9ca3af",
+              letterSpacing: "0.08em",
+              display:       "block",
+              marginBottom:  "6px",
+            }}
+          >
+            EMAIL_ADDRESS
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
+            required
+          />
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: "14px" }}>
+          <Label
+            htmlFor="password"
+            style={{
+              fontFamily:    "var(--font-mono)",
+              fontSize:      "10px",
+              color:         "#9ca3af",
+              letterSpacing: "0.08em",
+              display:       "block",
+              marginBottom:  "6px",
+            }}
+          >
+            PASSWORD_HASH
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
+            required
+          />
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize:   "9px",
+              color:      "#4b5563",
+              marginTop:  "5px",
+            }}
+          >
+            // min 8 chars · 1 uppercase · 1 number
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm text-[#d4d4d4]">
-              Name
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#6b7280] focus:border-[#569cd6] focus:ring-0 rounded-none"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm text-[#d4d4d4]">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#6b7280] focus:border-[#569cd6] focus:ring-0 rounded-none"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm text-[#d4d4d4]">
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#6b7280] focus:border-[#569cd6] focus:ring-0 rounded-none"
-              required
-            />
-            <p className="text-xs text-[#6b7280]">
-              Must be at least 8 characters with an uppercase letter and a number.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-sm text-[#d4d4d4]">
-              Confirm Password
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#6b7280] focus:border-[#569cd6] focus:ring-0 rounded-none"
-              required
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={signupMutation.isPending}
-            className="w-full bg-[#569cd6] text-[#0e0e0e] hover:bg-[#4a8bc2] font-medium rounded-none"
+        {/* Confirm Password */}
+        <div style={{ marginBottom: "24px" }}>
+          <Label
+            htmlFor="confirmPassword"
+            style={{
+              fontFamily:    "var(--font-mono)",
+              fontSize:      "10px",
+              color:         "#9ca3af",
+              letterSpacing: "0.08em",
+              display:       "block",
+              marginBottom:  "6px",
+            }}
           >
-            {signupMutation.isPending ? "Creating account..." : "Sign up"}
-          </Button>
-        </form>
+            CONFIRM_HASH
+          </Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
+            required
+          />
+        </div>
 
-        <p className="mt-6 text-center text-sm text-[#9ca3af]">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="text-[#569cd6] hover:underline font-medium"
-          >
-            Log in
-          </Link>
-        </p>
-      </div>
-    </main>
+        {/* Submit */}
+        <Button
+          type="submit"
+          disabled={signupMutation.isPending}
+          className="w-full bg-[#569cd6] text-[#0e0e0e] hover:bg-[#4a8bc2] font-medium rounded-none font-mono text-sm tracking-wider"
+        >
+          {signupMutation.isPending ? (
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  width:        "10px",
+                  height:       "10px",
+                  border:       "2px solid #0e0e0e",
+                  borderTop:    "2px solid transparent",
+                  borderRadius: "50%",
+                  display:      "inline-block",
+                  animation:    "spin 0.7s linear infinite",
+                }}
+              />
+              INSTANTIATING...
+            </span>
+          ) : (
+            "CREATE ACCOUNT →"
+          )}
+        </Button>
+      </form>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </AuthShell>
   );
 }
