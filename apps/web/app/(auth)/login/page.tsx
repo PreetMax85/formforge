@@ -56,7 +56,7 @@ export default function LoginPage() {
           <span
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize:   "11px",
+              fontSize:   "13px",
               color:      "#4b5563",
             }}
           >
@@ -66,7 +66,8 @@ export default function LoginPage() {
             href="/signup"
             style={{
               fontFamily:     "var(--font-mono)",
-              fontSize:       "11px",
+              fontSize:       "13px",
+              fontWeight:     600,
               color:          "#569cd6",
               textDecoration: "none",
               letterSpacing:  "0.05em",
