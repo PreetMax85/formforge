@@ -6,10 +6,10 @@
 |------|-------|
 | Project | FormForge |
 | GitHub | https://github.com/PreetMax85/formforge |
-| Frontend |  |
-| API |  |
-| Docs |  |
-| Explore |  |
+| Frontend | https://formforge.jdevs.codes/  |
+| API | https://api.formforge.jdevs.codes/ |
+| Docs | https://api.formforge.jdevs.codes/docs |
+| Explore | https://formforge.jdevs.codes/explore |
 | Demo credentials | See README.md |
 
 ---
