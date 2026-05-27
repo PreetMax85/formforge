@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "~/trpc/client";
 import { clearAccessToken, initAuth } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
@@ -370,6 +371,7 @@ function FormCard({
 /* ── Page ───────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -426,6 +428,7 @@ export default function DashboardPage() {
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      queryClient.clear();
       clearAccessToken();
       toast.success("Logged out");
       router.push("/login");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "~/trpc/client";
 import { setAccessToken } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
@@ -13,12 +14,14 @@ import AuthShell from "../_components/AuthShell";
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async (res) => {
       if (res.success && res.data?.accessToken) {
+        queryClient.clear();
         setAccessToken(res.data.accessToken);
         toast.success(res.message);
         await new Promise((r) => setTimeout(r, 100));
