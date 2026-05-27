@@ -28,13 +28,14 @@ const AUJLA_FORM = {
 };
 
 const DEMO_FORM_SLUGS = [SAMURAI_FORM.slug, JJK_FORM.slug, AUJLA_FORM.slug];
-const DEMO_USER_EMAILS = [DEMO_USER.email];
+const DEMO_USER_EMAILS = [DEMO_USER.email, 'demo@formforge.tech'];
+const LEGACY_ADMIN_EMAILS = ['admin@formforge.tech'];
 
 async function seed() {
   console.log('[SEED] Starting idempotent seed...');
 
   await db.delete(forms).where(inArray(forms.slug, DEMO_FORM_SLUGS));
-  await db.delete(users).where(inArray(users.email, DEMO_USER_EMAILS));
+  await db.delete(users).where(inArray(users.email, [...DEMO_USER_EMAILS, ...LEGACY_ADMIN_EMAILS]));
   console.log('[SEED] Existing demo records cleared');
 
   // Users — hash passwords with bcrypt so login works
