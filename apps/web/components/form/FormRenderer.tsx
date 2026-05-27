@@ -269,6 +269,35 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
         </div>
       )}
 
+      {/* Form title + description header */}
+      <div style={{ padding: '32px 24px 0', maxWidth: '560px', margin: '0 auto', width: '100%' }}>
+        <h1
+          style={{
+            fontSize:    '26px',
+            fontWeight:  700,
+            color:       'var(--text-primary)',
+            fontFamily:  "'Space Grotesk', sans-serif",
+            lineHeight:  1.25,
+            margin:      0,
+          }}
+        >
+          {formConfig.title}
+        </h1>
+        {formConfig.description && (
+          <p
+            style={{
+              fontSize:    '13px',
+              color:       'var(--text-secondary)',
+              fontFamily:  "'Inter', sans-serif",
+              lineHeight:  1.5,
+              margin:      '8px 0 0',
+            }}
+          >
+            {formConfig.description}
+          </p>
+        )}
+      </div>
+
       {/* Honeypot anti-spam field — read via hpRef in handleSubmit. */}
       <input
         ref={hpRef}
