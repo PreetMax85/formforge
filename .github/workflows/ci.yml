@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    name: Typecheck + Lint + Test + Build
+    name: Typecheck + Lint + Build + Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +22,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run typecheck
       - run: pnpm turbo run lint
+      - run: pnpm turbo run build
       - run: pnpm turbo run test
         env:
           DATABASE_URL: postgresql://stub:stub@stub/stub
           JWT_ACCESS_SECRET: stub-secret-minimum-thirty-two-characters-xx
           JWT_REFRESH_SECRET: stub-secret-minimum-thirty-two-characters-xx
-          APP_URL: https://formforge.tech
+          APP_URL: https://formforge.jdevs.codes
           RESEND_API_KEY: re_stub

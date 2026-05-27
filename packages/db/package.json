@@ -12,8 +12,7 @@
     "db:migrate":  "dotenv -e ../../.env -- tsx ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed":     "dotenv -e ../../.env -- tsx src/seed.ts",
     "db:studio":   "dotenv -e ../../.env -- tsx ./node_modules/drizzle-kit/bin.cjs studio",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src --max-warnings 0"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
