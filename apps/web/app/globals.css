@@ -121,3 +121,190 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Builder Inspector alternating property rows ──────────────────── */
+.prop-row:nth-child(even) {
+  background: #252526;
+}
+.prop-row:nth-child(odd) {
+  background: #1e1e1e;
+}
+
+/* ── Console LIVE pulse dot ─────────────────────────────────────── */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Hero headline cursor blink ─────────────────────────────────── */
+@keyframes cursor-blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+
+/* ── Game Engine Inspector CSS variables (:root = dashboard always) ─── */
+:root {
+  --bg-primary:      #1e1e1e;
+  --bg-secondary:    #252526;
+  --bg-tertiary:     #2d2d30;
+  --bg-active:       #094771;
+  --border:          #3c3c3c;
+  --border-subtle:   #2a2a2a;
+  --text-primary:    #d4d4d4;
+  --text-secondary:  #9ca3af;
+  --text-accent:     #569cd6;
+  --text-method:     #dcdcaa;
+  --text-type:       #4ec9b0;
+  --text-string:     #ce9178;
+  --text-number:     #b5cea8;
+  --status-live:     #4caf50;
+  --status-draft:    #ff9800;
+  --status-error:    #f44336;
+  --console-info:    #4fc3f7;
+  --console-warn:    #ffb74d;
+  --console-error:   #ef5350;
+  --console-success: #66bb6a;
+  --accent:          #569cd6;
+}
+
+/* ── Public form themes — applied via data-theme on /f/[slug] wrapper ── */
+
+[data-theme="ghost-of-tsushima"] {
+  --bg-primary:    #1a1208;
+  --bg-secondary:  #2d1f0e;
+  --bg-tertiary:   #3d2d15;
+  --border:        #4a3520;
+  --border-subtle: #2d1f0e;
+  --text-primary:  #f5deb3;
+  --text-secondary:#c4a882;
+  --text-accent:   #c8860a;
+  --accent:        #c8860a;
+}
+
+[data-theme="jujutsu-kaisen"] {
+  --bg-primary:    #0d0b1a;
+  --bg-secondary:  #1a1530;
+  --bg-tertiary:   #251f40;
+  --border:        #3a3060;
+  --border-subtle: #1a1530;
+  --text-primary:  #e8e0ff;
+  --text-secondary:#b8aee0;
+  --text-accent:   #7c3aed;
+  --accent:        #7c3aed;
+}
+
+[data-theme="karan-aujla-concert"] {
+  --bg-primary:    #060606;
+  --bg-secondary:  #111111;
+  --bg-tertiary:   #1a1a1a;
+  --border:        #2e2e2e;
+  --border-subtle: #1a1a1a;
+  --text-primary:  #fef3c7;
+  --text-secondary:#d4a340;
+  --text-accent:   #fbbf24;
+  --accent:        #fbbf24;
+}
+
+[data-theme="cyberpunk"] {
+  --bg-primary:    #0a0015;
+  --bg-secondary:  #1a0030;
+  --bg-tertiary:   #25004a;
+  --border:        #3d0070;
+  --border-subtle: #1a0030;
+  --text-primary:  #f0f0f0;
+  --text-secondary:#cc88ff;
+  --text-accent:   #ff2d78;
+  --accent:        #ff2d78;
+}
+
+[data-theme="matrix"] {
+  --bg-primary:    #000000;
+  --bg-secondary:  #001100;
+  --bg-tertiary:   #001a00;
+  --border:        #003300;
+  --border-subtle: #001100;
+  --text-primary:  #00ff41;
+  --text-secondary:#00cc33;
+  --text-accent:   #00cc33;
+  --accent:        #00cc33;
+}
+
+[data-theme="synthwave"] {
+  --bg-primary:    #1a0533;
+  --bg-secondary:  #2d0a52;
+  --bg-tertiary:   #3d0f6b;
+  --border:        #5a1a8a;
+  --border-subtle: #2d0a52;
+  --text-primary:  #f8f8f2;
+  --text-secondary:#ff79c6;
+  --text-accent:   #ff79c6;
+  --accent:        #ff79c6;
+}
+
+[data-theme="minimal"] {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f9fafb;
+  --bg-tertiary:   #f3f4f6;
+  --border:        #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-primary:  #111827;
+  --text-secondary:#6b7280;
+  --text-accent:   #3b82f6;
+  --accent:        #3b82f6;
+}
+
+/* ── Ghost of Tsushima: CSS falling sakura petals ─────────────────── */
+@keyframes petal-fall {
+  0%   { transform: translateY(-10vh) translateX(0) rotate(0deg);   opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(110vh) translateX(60px) rotate(360deg); opacity: 0; }
+}
+@keyframes petal-sway {
+  0%, 100% { margin-left: 0; }
+  50%       { margin-left: 30px; }
+}
+
+/* ── Karan Aujla Concert: CSS dual spotlight + crowd pulse ──────── */
+@keyframes spotlight-sweep {
+  0%   { background-position: 20% 40%; }
+  50%  { background-position: 80% 60%; }
+  100% { background-position: 20% 40%; }
+}
+@keyframes spotlight-sweep-reverse {
+  0%   { background-position: 80% 60%; }
+  50%  { background-position: 20% 40%; }
+  100% { background-position: 80% 60%; }
+}
+@keyframes crowd-pulse {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.35; }
+}
+
+/* ── Theme input/select resets for public form fields ─────────────── */
+[data-theme] input,
+[data-theme] textarea,
+[data-theme] select {
+  background: var(--bg-secondary);
+  color:      var(--text-primary);
+  border:     1px solid var(--border);
+  font-family: 'Inter', sans-serif;
+}
+[data-theme] input:focus,
+[data-theme] textarea:focus,
+[data-theme] select:focus {
+  outline:      none;
+  border-color: var(--text-accent);
+  box-shadow:   0 0 0 2px color-mix(in srgb, var(--text-accent) 20%, transparent);
+}
+[data-theme] input::placeholder,
+[data-theme] textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}

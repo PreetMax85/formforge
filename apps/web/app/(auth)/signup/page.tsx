@@ -16,29 +16,31 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const signupMutation = trpc.auth.signup.useMutation({
-    onSuccess: (res) => {
-      setIsLoading(false);
+    onSuccess: async (res) => {
       if (res.success && res.data?.accessToken) {
         setAccessToken(res.data.accessToken);
         toast.success(res.message);
+        await new Promise((r) => setTimeout(r, 100));
         router.push("/dashboard");
       } else {
         toast.error("Unexpected response");
       }
     },
     onError: (err) => {
-      setIsLoading(false);
       toast.error(err.message || "Signup failed");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name.trim() || !email || !password || !confirmPassword) {
       toast.error("Please fill in all fields");
+      return;
+    }
+    if (!email.includes('@')) {
+      toast.error("Please enter a valid email address");
       return;
     }
     if (password !== confirmPassword) {
@@ -49,8 +51,7 @@ export default function SignupPage() {
       toast.error("Password must be at least 8 characters");
       return;
     }
-    setIsLoading(true);
-    signupMutation.mutate({ name, email, password });
+    signupMutation.mutate({ name: name.trim(), email, password });
   };
 
   return (
@@ -131,7 +132,7 @@ export default function SignupPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || signupMutation.isPending}
+            disabled={signupMutation.isPending}
             className="w-full bg-[#569cd6] text-[#0e0e0e] hover:bg-[#4a8bc2] font-medium rounded-none"
           >
             {signupMutation.isPending ? "Creating account..." : "Sign up"}

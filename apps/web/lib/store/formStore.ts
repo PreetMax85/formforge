@@ -19,7 +19,11 @@ interface FormStore {
   getProgress:      (fields: Field[]) => number;
 }
 
-export function createFormStore(formSlug: string) {
+export function createFormStore(formSlug: string, mode: 'preview' | 'live' = 'live') {
+  // Scope storage key per mode so builder previews don't bleed into live form
+  // sessions for the same slug (and vice versa).
+  const storageKey = `formforge-${mode === 'preview' ? 'preview' : 'response'}-${formSlug}`;
+
   return create<FormStore>()(
     persist(
       (set, get) => ({
@@ -46,7 +50,7 @@ export function createFormStore(formSlug: string) {
         },
       }),
       {
-        name:       `formforge-response-${formSlug}`,
+        name:       storageKey,
         storage:    createJSONStorage(() => sessionStorage),
         partialize: (s) => ({ answers: s.answers }),
       }

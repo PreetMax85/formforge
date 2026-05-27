@@ -11,6 +11,8 @@ import { getAccessToken } from "~/lib/auth";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
       refetchOnMount: true,
       staleTime: Infinity,
     },

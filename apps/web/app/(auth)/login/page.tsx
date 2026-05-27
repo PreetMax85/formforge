@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "~/trpc/client";
 import { setAccessToken } from "~/lib/auth";
@@ -11,24 +10,21 @@ import { Label } from "~/components/ui/label";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: (res) => {
-      setIsLoading(false);
+    onSuccess: async (res) => {
       if (res.success && res.data?.accessToken) {
         setAccessToken(res.data.accessToken);
         toast.success(res.message);
-        router.push("/dashboard");
+        await new Promise((r) => setTimeout(r, 100));
+        window.location.href = "/dashboard";
       } else {
         toast.error("Unexpected response");
       }
     },
     onError: (err) => {
-      setIsLoading(false);
       toast.error(err.message || "Login failed");
     },
   });
@@ -39,7 +35,10 @@ export default function LoginPage() {
       toast.error("Please fill in all fields");
       return;
     }
-    setIsLoading(true);
+    if (!email.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     loginMutation.mutate({ email, password });
   };
 
@@ -88,7 +87,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || loginMutation.isPending}
+            disabled={loginMutation.isPending}
             className="w-full bg-[#569cd6] text-[#0e0e0e] hover:bg-[#4a8bc2] font-medium rounded-none"
           >
             {loginMutation.isPending ? "Logging in..." : "Log in"}

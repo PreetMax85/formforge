@@ -30,7 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    // suppressHydrationWarning: browser extensions (Brave's built-in
+    // dark-mode handler, Dark Reader, etc.) inject style="color-scheme:dark"
+    // onto <html> before React hydrates. The mismatch is cosmetic and React
+    // can't patch it, so we explicitly opt out of warning on this one node.
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable}`}>
         <GlobalProviders>{children}</GlobalProviders>
       </body>
