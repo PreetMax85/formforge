@@ -51,7 +51,6 @@ function pickBootLines(): BootLineData[] {
 }
 
 const PROMPT_DELAY = 2540;
-const AUTO_DISMISS = 3900;
 const EXIT_MS      = 650;
 
 /**
@@ -60,7 +59,7 @@ const EXIT_MS      = 650;
  * - Space Grotesk  (--font-display) for the FORMFORGE title
  * - JetBrains Mono (--font-mono)    for terminal lines
  * - framer-motion handles the fade-out exit
- * - Dismissed by keypress, click, or auto-timeout at ~3.9 s
+ * - Dismissed by keypress or click (sits on prompt until interaction)
  * - sessionStorage prevents re-showing on the same tab session
  */
 export default function BootScreen(): React.JSX.Element | null {
@@ -105,7 +104,6 @@ export default function BootScreen(): React.JSX.Element | null {
     });
 
     timers.push(setTimeout(() => setShowPrompt(true), PROMPT_DELAY));
-    timers.push(setTimeout(() => dismiss(), AUTO_DISMISS));
 
     return () => timers.forEach(clearTimeout);
   }, [dismiss]);
