@@ -1,6 +1,6 @@
 'use client';
 
-import { GripVertical } from 'lucide-react';
+import { GripVertical, GitBranch } from 'lucide-react';
 import { FIELD_TYPE_META } from '~/components/builder/FieldCard';
 import type { Field } from '~/lib/types/field';
 
@@ -37,6 +37,12 @@ export function HierarchyPanel({ fields, activeFieldId, onSelect }: HierarchyPan
       {fields.map((field, idx) => {
         const meta = FIELD_TYPE_META[field.type];
         const isActive = field.id === activeFieldId;
+        const hasConditions = !!(
+          field.conditions &&
+          (field.conditions as Record<string, unknown>).rules &&
+          Array.isArray((field.conditions as Record<string, unknown>).rules) &&
+          ((field.conditions as Record<string, unknown>).rules as unknown[]).length > 0
+        );
 
         return (
           <li key={field.id}>
@@ -100,6 +106,14 @@ export function HierarchyPanel({ fields, activeFieldId, onSelect }: HierarchyPan
               >
                 {field.label || 'Untitled field'}
               </span>
+
+              {/* Conditional indicator */}
+              {hasConditions && (
+                <GitBranch
+                  size={10}
+                  style={{ color: '#c586c0', flexShrink: 0 }}
+                />
+              )}
 
               {/* Grip */}
               <GripVertical

@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { sql, eq, and, desc, lt, inArray, type SQL } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
-import { ApiError } from '@repo/shared';
+import { ApiError, resolveVisibleFieldGraph } from '@repo/shared';
 import { logger } from '../../common/logger';
 import { env } from '../../common/config/env';
 import { detectSpamSubmissionCluster } from '../analytics/analytics.service';
@@ -85,12 +85,31 @@ export async function submitResponse(input: SubmitResponseInput) {
   if (form.expiresAt && form.expiresAt < new Date()) throw ApiError.forbidden('This form has closed');
   if (form.maxResponses && form.responseCount >= form.maxResponses) throw ApiError.forbidden('This form is no longer accepting responses');
 
-  // Server-side field validation
-  const validation = validateResponseAnswers(
+  // Build answers map for conditional-logic resolution
+  const answersMap: Record<string, string | string[]> = {};
+  for (const a of input.answers) {
+    answersMap[a.fieldId] = a.value;
+  }
+
+  // Resolve visible fields using conditional logic graph
+  const visibleFields = resolveVisibleFieldGraph(
     form.fields.map(f => ({
-      id: f.id, type: f.type, required: f.required,
-      config: f.config as Record<string, unknown>, label: f.label,
+      id: f.id,
+      type: f.type,
+      conditions: f.conditions as unknown | null,
     })),
+    answersMap,
+  );
+  const visibleFieldIds = new Set(visibleFields.map(vf => vf.id));
+
+  // Server-side field validation — only visible fields
+  const validation = validateResponseAnswers(
+    form.fields
+      .filter(f => visibleFieldIds.has(f.id))
+      .map(f => ({
+        id: f.id, type: f.type, required: f.required,
+        config: f.config as Record<string, unknown>, label: f.label,
+      })),
     input.answers,
   );
   if (!validation.success) {

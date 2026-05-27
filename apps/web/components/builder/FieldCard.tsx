@@ -47,6 +47,12 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
 
   const meta = FIELD_TYPE_META[field.type];
   const Icon = meta.icon;
+  const hasConditions = !!(
+    field.conditions &&
+    (field.conditions as Record<string, unknown>).rules &&
+    Array.isArray((field.conditions as Record<string, unknown>).rules) &&
+    ((field.conditions as Record<string, unknown>).rules as unknown[]).length > 0
+  );
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -122,6 +128,23 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
             {meta.label}
           </span>
         </div>
+
+        {/* Conditional logic badge */}
+        {hasConditions && (
+          <span
+            style={{
+              fontSize: '9px',
+              color: '#c586c0',
+              fontFamily: "'JetBrains Mono', monospace",
+              background: 'rgba(197,134,192,0.12)',
+              padding: '1px 5px',
+              flexShrink: 0,
+              letterSpacing: '0.04em',
+            }}
+          >
+            IF
+          </span>
+        )}
 
         {/* Required badge */}
         {field.required && (

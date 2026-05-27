@@ -449,6 +449,7 @@ export default function BuilderPage() {
           inspector={
             <InspectorPanel
               field={activeField}
+              allFields={fields}
               onUpdate={handleFieldUpdate}
               onDelete={activeField ? () => handleDeleteField(activeField) : undefined}
             />

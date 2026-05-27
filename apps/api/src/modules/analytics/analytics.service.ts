@@ -61,6 +61,7 @@ export async function calculateQ1toQnDropoff(formId: string): Promise<DropoffRow
       LEFT JOIN response_answers ra ON ra.field_id = f.id
       LEFT JOIN responses r         ON r.id = ra.response_id
       WHERE f.form_id = ${formId}
+        AND f.conditions IS NULL
       GROUP BY f.id, f.label, f."order"
     ),
     ranked AS (
@@ -101,12 +102,15 @@ export async function computeResponseCompletionFunnel(formId: string): Promise<F
   if (!form) return [];
 
   try {
-    const [fieldCountResult] = await db
-      .select({ count: count() })
-      .from(fields)
-      .where(eq(fields.formId, formId));
-
-    const totalFields = fieldCountResult?.count ?? 1;
+    const unconditionalFieldCount = await db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM fields
+      WHERE form_id = ${formId}
+        AND conditions IS NULL
+    `);
+    const totalFields = Number(
+      (unconditionalFieldCount.rows[0] as { cnt: number } | undefined)?.cnt ?? 1
+    );
     const halfwayThreshold = Math.floor(totalFields / 2);
 
     const halfwayResult = await db.execute(sql`
@@ -319,11 +323,22 @@ export async function getFormStats(formId: string): Promise<FormAnalyticsStats> 
   const recentResponses   = recentResult[0]?.count   ?? 0;
   const previousResponses = prevResult[0]?.count     ?? 0;
 
-  const totalFieldsResult = await db
-    .select({ count: count() })
-    .from(fields)
-    .where(eq(fields.formId, formId));
+  const [totalFieldsResult, unconditionalResult] = await Promise.all([
+    db
+      .select({ count: count() })
+      .from(fields)
+      .where(eq(fields.formId, formId)),
+    db.execute(sql`
+      SELECT COUNT(*)::int AS cnt
+      FROM fields
+      WHERE form_id = ${formId}
+        AND conditions IS NULL
+    `),
+  ]);
   const totalFields = totalFieldsResult[0]?.count ?? 0;
+  const totalUnconditionalFields = Number(
+    (unconditionalResult.rows[0] as { cnt: number } | undefined)?.cnt ?? 0
+  );
 
   let avgFieldsAnswered = 0;
   try {
@@ -360,6 +375,7 @@ export async function getFormStats(formId: string): Promise<FormAnalyticsStats> 
     avgDropoffRate,
     avgFieldsAnswered,
     totalFields,
+    totalUnconditionalFields,
     fieldDropoffs,
   };
 }

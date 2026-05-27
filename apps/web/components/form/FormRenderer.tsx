@@ -202,11 +202,11 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
     }
     setEmailError(null);
 
-    // Collect answers into AnswerSchema format
-    const answersArr = Object.entries(answers).map(([fieldId, value]) => ({
-      fieldId,
-      value,
-    }));
+    // Collect answers into AnswerSchema format — only visible fields
+    const visibleIds = new Set(visibleFields.map(f => f.id));
+    const answersArr = Object.entries(answers)
+      .filter(([fieldId]) => visibleIds.has(fieldId))
+      .map(([fieldId, value]) => ({ fieldId, value }));
 
     if (answersArr.length === 0) {
       setFieldError('Please answer at least one question.');

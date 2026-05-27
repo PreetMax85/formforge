@@ -19,13 +19,14 @@ export interface FormInsight {
 }
 
 export interface FormStats {
-  completionRate:    number;
-  recentResponses:   number;
-  previousResponses: number;
-  avgDropoffRate:    number;
-  avgFieldsAnswered: number;
-  totalFields:       number;
-  fieldDropoffs?:    DropoffRow[];
+  completionRate:           number;
+  recentResponses:          number;
+  previousResponses:        number;
+  avgDropoffRate:           number;
+  avgFieldsAnswered:        number;
+  totalFields:              number;
+  totalUnconditionalFields: number;
+  fieldDropoffs?:           DropoffRow[];
 }
 
 export interface FormAnalyticsStats extends FormStats {

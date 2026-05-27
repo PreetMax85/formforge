@@ -7,6 +7,7 @@ import type { Field } from '~/lib/types/field';
 
 interface InspectorPanelProps {
   field: Field | null;
+  allFields: Field[];
   onUpdate: (updated: Partial<Field>) => void;
   onDelete?: () => void;
 }
@@ -16,7 +17,7 @@ interface InspectorPanelProps {
  * Shows FieldInspector when a field is selected.
  * Shows an empty state placeholder when nothing is selected.
  */
-export function InspectorPanel({ field, onUpdate, onDelete }: InspectorPanelProps) {
+export function InspectorPanel({ field, allFields, onUpdate, onDelete }: InspectorPanelProps) {
   return (
     <AnimatePresence mode="wait">
       {field ? (
@@ -28,7 +29,7 @@ export function InspectorPanel({ field, onUpdate, onDelete }: InspectorPanelProp
           exit={{ opacity: 0, x: 20 }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
         >
-          <FieldInspector field={field} onChange={onUpdate} onDelete={onDelete} />
+          <FieldInspector field={field} allFields={allFields} onChange={onUpdate} onDelete={onDelete} />
         </motion.div>
       ) : (
         <motion.div

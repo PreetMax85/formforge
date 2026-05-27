@@ -3,12 +3,13 @@ import { computeFormHealthScore, generateFormInsightsSummary } from './analytics
 import type { FormStats, FormAnalyticsStats } from '@repo/shared';
 
 const realisticStats: FormStats = {
-  completionRate:    0.62,
-  recentResponses:   30,
-  previousResponses: 20,
-  avgDropoffRate:    0.15,
-  avgFieldsAnswered: 4,
-  totalFields:       6,
+  completionRate:           0.62,
+  recentResponses:          30,
+  previousResponses:        20,
+  avgDropoffRate:           0.15,
+  avgFieldsAnswered:        4,
+  totalFields:              6,
+  totalUnconditionalFields: 5,
 };
 
 describe('computeFormHealthScore', () => {
@@ -27,12 +28,13 @@ describe('computeFormHealthScore', () => {
     // - dropoffScore    = 0   (avgDropoffRate = 1.0 zeroes it out)
     // - engagementScore = 0   (avgFieldsAnswered / totalFields = 0)
     const score = computeFormHealthScore({
-      completionRate:    1,
-      recentResponses:   0,
-      previousResponses: 0,
-      avgDropoffRate:    1,
-      avgFieldsAnswered: 0,
-      totalFields:       1,
+      completionRate:           1,
+      recentResponses:          0,
+      previousResponses:        0,
+      avgDropoffRate:           1,
+      avgFieldsAnswered:        0,
+      totalFields:              1,
+      totalUnconditionalFields: 1,
     });
     expect(score).toBe(40);
   });
