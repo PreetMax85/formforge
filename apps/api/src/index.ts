@@ -30,6 +30,15 @@ const cleanupTimer = setInterval(async () => {
   }
 }, 15 * 60 * 1000);
 
+// TODO: Remove after judging — keep-alive prevents Neon cold starts during demo week
+const keepAliveTimer = setInterval(async () => {
+  try {
+    await db.execute(sql`SELECT 1`);
+  } catch {
+    // Neon compute may be waking — next request will retry
+  }
+}, 25_000);
+
 const server = app.listen(env.PORT, () => {
   logger.info(`[API] FormForge running on port ${env.PORT} (${env.NODE_ENV})`);
   logger.info(`[API] Docs: http://localhost:${env.PORT}/docs`);
@@ -42,6 +51,7 @@ async function shutdown(signal: string): Promise<void> {
 
   logger.info(`[API] Received ${signal} — shutting down gracefully.`);
   clearInterval(cleanupTimer);
+  clearInterval(keepAliveTimer);
 
   // Stop accepting new connections; wait for in-flight requests (max 5s).
   await new Promise<void>((resolve) => {

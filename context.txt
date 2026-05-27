@@ -1,0 +1,236 @@
+Hackathon Details:
+
+Build a production-style form builder SaaS where users can create dynamic forms, publish public or unlisted form links and collect responses.
+
+You will be given a Turborepo starter repository. Your job is to extend it into a complete Typeform-style product with form creation, public form filling, analytics, email flows and API documentation.
+
+Creators should be able to create forms, add fields, configure validations, choose themes, publish/unpublish forms and share links with respondents. Public users should be able to fill forms and submit responses without logging in.
+
+Forms should support dynamic schemas with configurable fields, validation rules and required/optional settings. Use Zod for schema validation and tRPC for type-safe APIs. The project must use Turborepo, tRPC, Zod, Drizzle ORM and Scalar as core parts of the stack.
+
+The product should also feel like a real SaaS application with:
+
+landing page
+
+pricing page
+
+demo-ready deployment
+
+API documentation
+
+sample seeded data
+
+demo credentials
+
+The demo should already contain sample forms, themes, responses and analytics so judges can review the product quickly.
+
+Forms should support creative themes around movies, anime, games, startups, tech companies, operating systems, events or communities.
+
+Starter Repository
+
+https://github.com/piyushgarg-dev/trpc-monorepo
+
+Functional Requirements
+
+User authentication and protected creator dashboard
+
+Create, edit, publish and manage forms
+
+Dynamic fields with validations and required/optional settings
+
+Multiple field types like text, email, number, select, checkbox, rating and date
+
+Public and unlisted form links
+
+Public form submission without login
+
+Response analytics and response management
+
+Email notification flow for creators/respondents
+
+Landing page and pricing page
+
+API documentation using Scalar
+
+Demo-ready deployment with seeded data and demo credentials
+
+Non-Functional Requirements
+
+Use the provided Turborepo starter structure
+
+Frontend and backend should run as separate apps inside the monorepo
+
+Shared packages for schemas, types, utilities and API clients
+
+Type-safe APIs using tRPC
+
+Validation using Zod
+
+Clean database schema design using Drizzle ORM
+
+Rate limiting and basic spam protection for public APIs
+
+Responsive and usable UI
+
+Proper error handling and loading states
+
+Structured, maintainable and scalable codebase
+
+Clear README with setup instructions, API docs and demo credentials
+
+Bonus Features
+
+Form preview before publishing
+
+Conditional logic between questions
+
+Form expiry or response limit
+
+CSV export for responses
+
+Charts and analytics dashboards
+
+Custom form slugs
+
+QR code sharing
+
+Password-protected forms
+
+Form templates and theme gallery
+
+Response filtering and pagination
+
+Form clone/archive support
+
+Multi-page form experience
+
+Admin dashboard
+
+Better UX states and polished product experience
+
+Rules & Guidelines
+
+This is a solo hackathon. Team size must be exactly 1.
+
+Participants must use the provided Turborepo starter repository.
+
+The project must use Turborepo, tRPC, Zod, Drizzle ORM and Scalar.
+
+Frontend and backend both are mandatory.
+
+Frontend and backend must run as separate apps inside the monorepo.
+
+Shared code should be managed properly using packages for schemas, types, utilities or API clients.
+
+Authentication for creators is mandatory.
+
+Creators should be able to create, edit, publish and manage forms.
+
+Forms must support dynamic fields with validation and required/optional configurations.
+
+Forms must support at least:
+
+short text
+
+long text
+
+email
+
+number
+
+single select
+
+multi select
+
+Additional field types like checkbox, dropdown, rating and date are encouraged.
+
+Zod must be used for form schema validation and response validation.
+
+Public users should be able to submit forms without logging in.
+
+Forms must support public and unlisted visibility modes.
+
+Creators should be able to view responses and analytics for their forms.
+
+The project must include at least 3 themed sample forms with seeded responses and analytics data.
+
+The application must include:
+
+landing page
+
+pricing page
+
+deployed demo
+
+API documentation
+
+demo credentials
+
+Real payment integration is not required.
+
+The form submission flow should end with a proper confirmation or thank-you screen.
+
+Email notifications for creators/respondents are encouraged.
+
+Rate limiting must be implemented for public response submission APIs.
+
+API documentation using Scalar is required.
+
+Demo credentials and API documentation links must be included in the README.
+
+The deployed demo should be judge-friendly and should not require manual setup to review the project.
+
+Both frontend and backend code must be maintained inside one single GitHub repository.
+
+Final submission must include:
+
+public GitHub repository
+
+deployed project link
+
+demo credentials
+
+API documentation link
+
+proper README
+
+Broken deployments, invalid credentials or inaccessible demos may affect evaluation.
+
+Plagiarized, copied or low-effort AI-generated submissions without understanding or implementation effort will be disqualified.
+
+Some FAQs:
+
+The project must use Turborepo, tRPC, Zod, Drizzle ORM and Scalar. You are free to use Next.js (or) React.js for frontend. Public forms are published forms that can appear in public-facing areas of the product, such as explore pages, featured forms or template galleries. Anyone can open and submit them. Unlisted forms are also published, but they should not appear anywhere publicly inside the product. Only people with the direct form link should be able to open and submit them. Yes. Both public and unlisted forms can be submitted without login if the form is published. The difference is only visibility: public forms can be listed inside the product, while unlisted forms are direct-link only. At minimum, forms should support short text, long text, email, number, single select and multi select. Additional fields like dropdown, checkbox, rating and date are encouraged. tRPC must be used for type-safe APIs between frontend and backend. API documentation using OpenAPI Specification with Scalar is required.Rate limiting must be implemented for public form response submission APIs. The project should include a pricing page with dummy SaaS-style plans such as Free, Pro and Business. Real payment integration is not required. Creators should be able to create or choose themes for forms. Themes can be based on movies, anime, games, tech companies, operating systems, startups, events, communities or any other creative idea. Respondents should be able to optionally receive an email copy of their submitted response if they provide their email. Creators should be able to enable or disable email notifications when a new response is submitted. Admin or platform owner features are optional bonus features. If you add them, provide working admin credentials in the README and submission notes. Bonus features like conditional logic, form expiry, response limit, CSV export, QR code sharing, password-protected forms, response filtering, custom thank-you page, form templates and admin dashboard can improve your submission.
+
+Soo, after reading the above FAQs, do you have any more questions?
+
+I kinda have a PRD ready, can you go through that first?
+
+hackathon starts - 18th may. Ends on may 27, at 12am
+
+Big note: The judges are going to have a DEMO DAY, meaning, the top 10-20 projects are going to be reviewed live on youtube livestream, and major, major focus in on UI/UX. like one sir ( judge) has told to get as creative as you can with the UI. he suggested to check posthog UI, or something like a macOS or windows xp theme, but something very creative.
+
+The points system:
+
+Monorepo Structure & Starter Code Usage · 10
+
+Authentication & Creator Access · 10
+
+Dynamic Form Builder · 15
+
+Zod Schema Design & Validation · 15
+
+Type-Safe APIs With tRPC · 10
+
+Database Design With Drizzle · 10
+
+Public Form Submission & Response Ingestion · 12
+
+Analytics & Response Management · 8
+
+Product Experience & Demo Readiness · 7
+
+API Documentation With Scalar · 3
+
+One more thing, AI is gonna judge the code, the hackathon creators: CHAICODE team, have created a very good AI to judge hackathons.
+

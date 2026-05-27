@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { env } from '../../common/config/env';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { ApiError } from '@repo/shared';
+import { logger } from '../../common/logger';
 
 interface TokenPayload {
   sub: string;
@@ -51,7 +52,19 @@ export async function createUser(email: string, name: string, password: string) 
 }
 
 export async function loginUser(email: string, password: string) {
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  // Retry up to 3 times for transient DB errors (e.g. Neon cold start)
+  let user: typeof users.$inferSelect | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      user = rows[0];
+      break;
+    } catch (err) {
+      if (attempt === 2) throw err;
+      logger.warn({ err, attempt: attempt + 1 }, '[Auth] DB query failed, retrying...');
+      await new Promise(r => setTimeout(r, 2_000));
+    }
+  }
 
   // Anti-enumeration: same error for wrong email and wrong password
   if (!user) throw ApiError.unauthorized('Invalid email or password');
