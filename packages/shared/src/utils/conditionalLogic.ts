@@ -1,4 +1,4 @@
-import { ConditionalLogicSchema } from '../schemas/fields.schemas.js';
+import { ConditionalLogicSchema } from '../schemas/fields.schemas';
 
 export interface FieldForGraph {
   id:         string;

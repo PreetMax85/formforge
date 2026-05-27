@@ -1,12 +1,12 @@
 import { relations } from 'drizzle-orm';
 
-import { users } from './users.js';
-import { sessions } from './sessions.js';
-import { tokenBlocklist } from './token-blocklist.js';
-import { forms } from './forms.js';
-import { fields } from './fields.js';
-import { responses } from './responses.js';
-import { responseAnswers } from './response-answers.js';
+import { users } from './users';
+import { sessions } from './sessions';
+import { tokenBlocklist } from './token-blocklist';
+import { forms } from './forms';
+import { fields } from './fields';
+import { responses } from './responses';
+import { responseAnswers } from './response-answers';
 
 export const usersRelations = relations(users, ({ many }) => ({
   forms:    many(forms),

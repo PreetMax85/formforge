@@ -18,7 +18,7 @@ export const UpdateFormSchema = z.object({
   id:              z.string().uuid(),
   title:           z.string().min(1).max(255).optional(),
   description:     z.string().max(1000).optional(),
-  slug:            z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).optional(),
+  slug:            z.string().min(3).max(100).regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, hyphens').optional(),
   theme:           z.enum(FORM_THEMES).optional(),
   visibility:      z.enum(['public', 'unlisted']).optional(),
   notifyCreator:   z.boolean().optional(),

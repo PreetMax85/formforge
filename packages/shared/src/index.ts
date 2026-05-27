@@ -1,6 +1,6 @@
-export * from './schemas/index.js';
-export * from './types/index.js';
-export * from './errors/ApiError.js';
-export * from './constants/index.js';
-export { resolveVisibleFieldGraph } from './utils/conditionalLogic.js';
-export type { FieldForGraph } from './utils/conditionalLogic.js';
+export * from './schemas/index';
+export * from './types/index';
+export * from './errors/ApiError';
+export * from './constants/index';
+export { resolveVisibleFieldGraph } from './utils/conditionalLogic';
+export type { FieldForGraph } from './utils/conditionalLogic';

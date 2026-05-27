@@ -1,8 +1,8 @@
 import {
   pgTable, pgEnum, uuid, varchar, text,
-  boolean, integer, jsonb, timestamp,
+  boolean, integer, jsonb, timestamp, uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { forms } from './forms.js';
+import { forms } from './forms';
 
 export const fieldTypeEnum = pgEnum('field_type', [
   'short_text', 'long_text', 'email', 'number',
@@ -24,4 +24,6 @@ export const fields = pgTable('fields', {
   conditions:  jsonb('conditions'),
   createdAt:   timestamp('created_at').notNull().defaultNow(),
   updatedAt:   timestamp('updated_at').notNull().defaultNow(),
-});
+}, (t) => [
+  uniqueIndex('fields_form_id_order_idx').on(t.formId, t.order),
+]);

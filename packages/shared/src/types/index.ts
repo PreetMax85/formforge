@@ -9,4 +9,4 @@ export type ResponseAnswer = InferSelectModel<typeof responseAnswers>;
 export type FormWithFields = Form & { fields: Field[] };
 export type ResponseWithAnswers = Response & { answers: ResponseAnswer[] };
 
-export type { DropoffRow, FunnelStage, FormInsight, FormStats, FormAnalyticsStats } from './analytics.js';
+export type { DropoffRow, FunnelStage, FormInsight, FormStats, FormAnalyticsStats } from './analytics';

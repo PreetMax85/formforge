@@ -36,9 +36,14 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+.vscode
 ARCHITECTURE.md
 AGENTS.md
 context.txt
-.vscode
+.codex
+.agents
+.claude
+todo.md
+todo.md
 
-packages/db/migrations/meta/
+

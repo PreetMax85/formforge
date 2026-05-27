@@ -12,7 +12,7 @@ export const SubmitResponseSchema = z.object({
   respondentName:  z.string().max(255).optional(),
   sendEmailCopy:   z.boolean().default(false),
   turnstileToken:  z.string().optional(),
-  _hp:             z.string().max(0, 'Bot detected').optional(),
+  _hp:             z.string().optional(),
 });
 
 export const ListResponsesSchema = z.object({

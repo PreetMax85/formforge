@@ -31,7 +31,9 @@ export const FieldConfigSchema = z.discriminatedUnion('type', [
 export const ReorderFieldsSchema = z.object({
   formId: z.string().uuid(),
   fields: z.array(z.object({
-    id:    z.string().uuid(),
+    // Accepts both real UUIDs (persisted fields) and client-side temp IDs
+    // like `temp-1712000000-abc`. Service silently no-ops on unknown IDs.
+    id:    z.string().min(1),
     order: z.number().int().min(0),
   })).min(1).max(50),
 });

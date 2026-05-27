@@ -1,6 +1,24 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "NODE_ENV",
+    "PORT",
+    "DATABASE_URL",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "JWT_ACCESS_EXPIRES_IN",
+    "JWT_REFRESH_EXPIRES_IN",
+    "APP_URL",
+    "RESEND_API_KEY",
+    "SENTRY_DSN",
+    "TURNSTILE_SECRET_KEY",
+    "TURNSTILE_ENABLED",
+    "COOKIE_DOMAIN",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_SENTRY_DSN",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+    "DEBUG_SQL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
