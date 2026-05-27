@@ -15,7 +15,6 @@ import {
   exploreForms,
   incrementViewCount,
 } from '../../modules/forms/forms.service';
-import { logger } from '../../common/logger';
 
 // Explicit output envelope to avoid z.any()
 const successEnvelope = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -204,7 +203,6 @@ const formsRouter = router({
   myForms: protectedProcedure
     .query(async ({ ctx }) => {
       const items = await getFormsByCreator(ctx.user.sub);
-      logger.info({ creatorId: ctx.user.sub, count: items.length }, '[Forms] myForms query');
       return { success: true as const, message: 'Forms found', data: { items } };
     }),
 
