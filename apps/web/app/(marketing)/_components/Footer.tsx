@@ -1,12 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
-
-const DEMO_EMAIL    = 'demo@formforge.tech';
-const DEMO_PASSWORD = 'Demo@FormForge2026';
-const ADMIN_EMAIL   = 'admin@formforge.tech';
 
 const PRODUCT_LINKS = [
   { label: 'Explore Forms', href: '/explore'  },
@@ -16,45 +10,6 @@ const PRODUCT_LINKS = [
                               : '/docs',
     external: true },
 ] as const;
-
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard blocked, silent */
-    }
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      aria-label={copied ? 'Copied' : `Copy ${value}`}
-      style={{
-        background: 'transparent',
-        border:     '1px solid #2a2a2a',
-        color:      copied ? '#4ec9b0' : '#6b7280',
-        padding:    '3px 5px',
-        cursor:     'pointer',
-        display:    'inline-flex',
-        alignItems: 'center',
-        transition: 'border-color 0.15s, color 0.15s',
-      }}
-      onMouseEnter={(e) => {
-        if (!copied) (e.currentTarget as HTMLButtonElement).style.borderColor = '#569cd6';
-      }}
-      onMouseLeave={(e) => {
-        if (!copied) (e.currentTarget as HTMLButtonElement).style.borderColor = '#2a2a2a';
-      }}
-    >
-      {copied ? <Check size={10} /> : <Copy size={10} />}
-    </button>
-  );
-}
 
 export default function Footer() {
   return (
@@ -67,7 +22,7 @@ export default function Footer() {
       }}
     >
       <div
-        className="grid grid-cols-1 md:grid-cols-3 gap-12"
+        className="grid grid-cols-1 md:grid-cols-2 gap-12"
         style={{ maxWidth: '1152px', margin: '0 auto' }}
       >
         {/* ── Brand col ───────────────────────────────────────── */}
@@ -134,43 +89,6 @@ export default function Footer() {
             })}
           </ul>
         </div>
-
-        {/* ── Demo creds col ──────────────────────────────────── */}
-        <div>
-          <p
-            style={{
-              fontFamily:    "'JetBrains Mono', monospace",
-              fontSize:      '10px',
-              color:         '#569cd6',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              marginBottom:  '14px',
-            }}
-          >
-            // Demo credentials
-          </p>
-          <div
-            style={{
-              border:     '1px solid #2a2a2a',
-              background: '#141414',
-              padding:    '14px',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize:   '12px',
-            }}
-          >
-            <div className="flex items-center justify-between" style={{ marginBottom: '8px' }}>
-              <span style={{ color: '#9ca3af' }}>{DEMO_EMAIL}</span>
-              <CopyButton value={DEMO_EMAIL} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span style={{ color: '#9ca3af' }}>{DEMO_PASSWORD}</span>
-              <CopyButton value={DEMO_PASSWORD} />
-            </div>
-          </div>
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#4b5563', marginTop: '10px' }}>
-            Admin: {ADMIN_EMAIL}
-          </p>
-        </div>
       </div>
 
       {/* ── Bottom bar ─────────────────────────────────────────── */}
@@ -187,7 +105,7 @@ export default function Footer() {
           letterSpacing: '0.04em',
         }}
       >
-        FormForge · ChaiCode Hackathon 2025 · Built by Preet
+        &copy; 2025 FormForge
       </div>
     </footer>
   );
