@@ -109,6 +109,8 @@ export default function FormOverviewPage({
   const timeSeriesQuery   = trpc.analytics.timeSeries.useQuery({ formId, granularity });
   const insightsQuery     = trpc.analytics.insights.useQuery({ formId });
 
+  const showLoading = useDelayedLoading(formQuery.isLoading);
+
   /* ── 4-state pattern on primary data ────────────────────────── */
   if (formQuery.error) {
     return (
@@ -156,8 +158,6 @@ export default function FormOverviewPage({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
-
-  const showLoading = useDelayedLoading(formQuery.isLoading);
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (

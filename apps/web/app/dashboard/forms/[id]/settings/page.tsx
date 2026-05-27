@@ -240,6 +240,8 @@ export default function FormSettingsPage({
     });
   }
 
+  const showLoading = useDelayedLoading(formQuery.isLoading);
+
   /* ── 4-state pattern ─────────────────────────────────────────── */
   if (formQuery.error) {
     return (
@@ -254,8 +256,6 @@ export default function FormSettingsPage({
   }
 
   if (!form) return null;
-
-  const showLoading = useDelayedLoading(formQuery.isLoading);
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
