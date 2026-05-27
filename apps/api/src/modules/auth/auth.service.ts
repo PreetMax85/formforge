@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
-import { db } from '../../common/db/index.js';
+import { db } from '../../common/db/index';
 import { users, sessions, tokenBlocklist } from '@repo/db/schema';
 import { eq } from 'drizzle-orm';
-import { env } from '../../common/config/env.js';
-import { AUTH_CONSTANTS } from './auth.constants.js';
+import { env } from '../../common/config/env';
+import { AUTH_CONSTANTS } from './auth.constants';
 import { ApiError } from '@repo/shared';
 
 interface TokenPayload {
@@ -24,7 +24,7 @@ function signAccessToken(payload: Omit<TokenPayload, 'jti' | 'type'>): { token: 
   const token = jwt.sign(
     { ...payload, type: 'access', jti },
     env.JWT_ACCESS_SECRET,
-    { expiresIn: AUTH_CONSTANTS.ACCESS_TOKEN_EXPIRY }
+    { expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
   return { token, jti };
 }
@@ -34,7 +34,7 @@ function signRefreshToken(payload: { sub: string; email: string }): { token: str
   const token = jwt.sign(
     { ...payload, type: 'refresh', jti },
     env.JWT_REFRESH_SECRET,
-    { expiresIn: AUTH_CONSTANTS.REFRESH_TOKEN_EXPIRY }
+    { expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
   return { token, jti };
 }
@@ -68,13 +68,21 @@ export function createTokens(userId: string, email: string) {
   return { access, refresh };
 }
 
+function parseExpiresIn(str: string): number {
+  const match = str.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) return 7 * 86_400 * 1000;
+  const [, n, unit] = match;
+  const multipliers: Record<string, number> = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  return parseInt(n!) * (multipliers[unit!] ?? 86_400_000);
+}
+
 export async function saveSession(
   userId: string,
   refreshToken: string,
   refreshJti: string,
   userAgent?: string,
 ) {
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN ?? '7d'));
   const hashed = createHash('sha256').update(refreshToken).digest('hex');
 
   await db.insert(sessions).values({

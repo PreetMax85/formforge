@@ -1,9 +1,11 @@
-import { db } from '../../common/db/index.js';
-import { forms, users } from '@repo/db/schema';
-import { eq, desc, sql, and, gt, lt, or, like } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { db } from '../../common/db/index';
+import { forms, fields } from '@repo/db/schema';
+import { eq, desc, sql, and, gt, lt, or, like, asc } from 'drizzle-orm';
 import { ApiError } from '@repo/shared';
 import type { z } from 'zod';
 import type { CreateFormSchema, UpdateFormSchema } from '@repo/shared';
+import { logger } from '../../common/logger'
 
 /**
  * Generates a URL-safe slug from a base title. Handles collisions by
@@ -29,7 +31,7 @@ export async function generateUniqueSlug(baseTitle: string): Promise<string> {
   if (existing.length === 0) return base;
 
   for (let i = 0; i < 5; i++) {
-    const candidate = `${base}-${nanoid(4)}`;
+    const candidate = `${base}-${nanoid(4)}`.toLowerCase();
     const collision = await db
       .select({ slug: forms.slug })
       .from(forms)
@@ -38,7 +40,7 @@ export async function generateUniqueSlug(baseTitle: string): Promise<string> {
     if (collision.length === 0) return candidate;
   }
 
-  return nanoid(12);
+  return nanoid(12).toLowerCase();
 }
 
 /**
@@ -84,17 +86,32 @@ export async function getFormById(id: string, requesterId?: string) {
   if (requesterId && form.creatorId !== requesterId) {
     throw ApiError.forbidden('You do not have access to this form');
   }
-  return form;
+  const formFields = await db
+    .select()
+    .from(fields)
+    .where(eq(fields.formId, id))
+    .orderBy(asc(fields.order));
+  return { ...form, fields: formFields };
 }
 
 export async function getFormBySlug(slug: string) {
+  // No status filter here — callers (public f/[slug] page and responses.submit)
+  // gate on status='published' themselves. This allows owner preview-by-slug
+  // and avoids leaking 404 vs 403 information to the public form page.
   const [form] = await db
     .select()
     .from(forms)
-    .where(and(eq(forms.slug, slug), eq(forms.status, 'published')))
+    .where(eq(forms.slug, slug))
     .limit(1);
   if (!form) throw ApiError.notFound('Form not found');
-  return form;
+
+  const formFields = await db
+    .select()
+    .from(fields)
+    .where(eq(fields.formId, form.id))
+    .orderBy(asc(fields.order));
+
+  return { ...form, fields: formFields };
 }
 
 export async function getFormsByCreator(creatorId: string) {
@@ -140,6 +157,21 @@ export async function updateForm(
     .returning();
 
   if (!updated) throw ApiError.internal('Failed to update form');
+  return updated;
+}
+
+export async function archiveForm(id: string, requesterId: string) {
+  const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
+  if (!existing) throw ApiError.notFound('Form not found');
+  if (existing.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to archive this form');
+  }
+  const [updated] = await db
+    .update(forms)
+    .set({ status: 'archived', updatedAt: new Date() })
+    .where(eq(forms.id, id))
+    .returning();
+  if (!updated) throw ApiError.internal('Failed to archive form');
   return updated;
 }
 
@@ -224,4 +256,96 @@ export async function exploreForms(
   const nextCursor = hasMore ? trimmed[trimmed.length - 1]!.id : null;
 
   return { items: trimmed, nextCursor };
+}
+
+/**
+ * Deep-clones a form into a new draft owned by the same creator. Copies all
+ * field configuration including conditional-logic rules — sourceFieldId UUIDs
+ * are rewritten to point at the cloned field IDs so conditions stay valid.
+ * Resets responseCount/viewCount/publishedAt and forces status='draft'.
+ */
+export async function cloneForm(formId: string, requesterId: string) {
+  const original = await db.query.forms.findFirst({
+    where: eq(forms.id, formId),
+    with: { fields: { orderBy: (f, { asc: ascFn }) => [ascFn(f.order)] } },
+  });
+  if (!original) throw ApiError.notFound('Form not found');
+  if (original.creatorId !== requesterId) {
+    throw ApiError.forbidden('You do not have permission to clone this form');
+  }
+
+  const newSlug = await generateUniqueSlug(`${original.title}-copy`);
+
+  // Pre-generate field UUIDs so conditional-logic rules can be remapped to
+  // the cloned field IDs before the insert runs.
+  const idMap = new Map<string, string>();
+  for (const f of original.fields) idMap.set(f.id, randomUUID());
+
+  return await db.transaction(async (tx) => {
+    const [cloned] = await tx
+      .insert(forms)
+      .values({
+        creatorId:       requesterId,
+        title:           `${original.title} (Copy)`,
+        description:     original.description,
+        slug:            newSlug,
+        status:          'draft',
+        visibility:      original.visibility,
+        theme:           original.theme,
+        allowAnonymous:  original.allowAnonymous,
+        requireEmail:    original.requireEmail,
+        showProgressBar: original.showProgressBar,
+        notifyCreator:   original.notifyCreator,
+        thankYouTitle:   original.thankYouTitle,
+        thankYouMessage: original.thankYouMessage,
+        maxResponses:    original.maxResponses,
+        expiresAt:       original.expiresAt,
+        passwordHash:    original.passwordHash,
+      })
+      .returning();
+    if (!cloned) throw ApiError.internal('Failed to clone form');
+
+    if (original.fields.length > 0) {
+      await tx.insert(fields).values(
+        original.fields.map((f) => ({
+          id:          idMap.get(f.id)!,
+          formId:      cloned.id,
+          type:        f.type,
+          label:       f.label,
+          placeholder: f.placeholder,
+          description: f.description,
+          required:    f.required,
+          order:       f.order,
+          config:      f.config,
+          conditions:  remapConditionSourceIds(f.conditions, idMap),
+        })),
+      );
+    }
+
+    return cloned;
+  });
+}
+
+/** Rewrites sourceFieldId references inside a field's conditions blob. */
+function remapConditionSourceIds(conds: unknown, idMap: Map<string, string>): unknown {
+  if (!conds || typeof conds !== 'object') return conds;
+  const c = conds as { rules?: { sourceFieldId?: string }[] };
+  if (!Array.isArray(c.rules)) return conds;
+  return {
+    ...c,
+    rules: c.rules.map((r) => ({
+      ...r,
+      sourceFieldId: r.sourceFieldId ? (idMap.get(r.sourceFieldId) ?? r.sourceFieldId) : r.sourceFieldId,
+    })),
+  };
+}
+
+export async function incrementViewCount(formId: string): Promise<void> {
+  await db
+    .update(forms)
+    .set({ viewCount: sql`${forms.viewCount} + 1` })
+    .where(eq(forms.id, formId))
+    .catch((err: unknown) => {
+      logger.error({ err, formId }, '[VIEW] Failed to increment view count');
+    });
 }

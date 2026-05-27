@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { ApiError } from '@repo/shared';
-import { logger } from '../logger.js';
+import { logger } from '../logger';
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next): void => {
   if (err instanceof ZodError) {
@@ -16,11 +16,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next): void =
     res.status(err.statusCode).json({ success: false, error: err.message });
     return;
   }
-  if ((err as NodeJS.ErrnoException).code === '23505') {
+  const pgCode = (err as { code?: string }).code;
+  if (pgCode === '23505') {
     res.status(409).json({ success: false, error: 'Already exists.' });
     return;
   }
-  if ((err as NodeJS.ErrnoException).code === '23503') {
+  if (pgCode === '23503') {
     res.status(400).json({ success: false, error: 'Invalid reference.' });
     return;
   }

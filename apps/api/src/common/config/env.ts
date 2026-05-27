@@ -3,7 +3,10 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT:                   z.coerce.number().default(8080),
   NODE_ENV:               z.enum(['development', 'production', 'test']).default('development'),
-  DATABASE_URL:           z.string().startsWith('postgresql'),
+  DATABASE_URL:           z.string().refine(
+    (url) => url.startsWith('postgresql://') || url.startsWith('postgres://'),
+    { message: 'DATABASE_URL must be a valid PostgreSQL connection string' }
+  ),
   JWT_ACCESS_SECRET:      z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET:     z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN:  z.string().default('15m'),
@@ -14,6 +17,8 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY:   z.string().optional(),
   TURNSTILE_ENABLED:      z.coerce.boolean().default(false),
   COOKIE_DOMAIN:          z.string().optional(),
+  // Opt-in SQL query logging (loud). Off by default even in dev.
+  DEBUG_SQL:              z.coerce.boolean().default(false),
 });
 
 const result = envSchema.safeParse(process.env);

@@ -1,11 +1,11 @@
 import { createHash } from 'crypto';
-import { sql, eq } from 'drizzle-orm';
-import { db } from '../../common/db/index.js';
-import { forms, responses, responseAnswers } from '@repo/db/schema';
+import { sql, eq, and, desc, lt, inArray, type SQL } from 'drizzle-orm';
+import { db } from '../../common/db/index';
+import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
 import { ApiError } from '@repo/shared';
-import { logger } from '../../common/logger.js';
-import { env } from '../../common/config/env.js';
-import { detectSpamSubmissionCluster } from '../analytics/analytics.service.js';
+import { logger } from '../../common/logger';
+import { env } from '../../common/config/env';
+import { detectSpamSubmissionCluster } from '../analytics/analytics.service';
 import { sendResponseReceived, sendResponseCopy } from '@repo/email';
 
 interface SubmitResponseInput {
@@ -74,7 +74,10 @@ export async function submitResponse(input: SubmitResponseInput) {
   // Step 2: Finite State Machine Gate
   const form = await db.query.forms.findFirst({
     where: eq(forms.slug, input.formSlug),
-    with: { fields: { orderBy: (f, { asc }) => [asc(f.order)] } },
+    with: {
+      fields:  { orderBy: (f, { asc }) => [asc(f.order)] },
+      creator: { columns: { email: true } },
+    },
   });
 
   if (!form) throw ApiError.notFound('Form not found');
@@ -127,7 +130,7 @@ export async function submitResponse(input: SubmitResponseInput) {
         submissionHash,
         submissionHashExpiresAt,
       })
-      .onConflictDoNothing()
+      .onConflictDoNothing({ target: responses.submissionHash })
       .returning();
 
     if (!response) return { duplicate: true, response: null };
@@ -151,7 +154,7 @@ export async function submitResponse(input: SubmitResponseInput) {
   });
 
   if (result.duplicate) {
-    return { success: true, message: 'Response already received.' };
+    return { success: true, message: 'Response already received.', duplicate: true };
   }
 
   // Dead Letter Queue (DLQ) pattern: email notifications dispatched
@@ -160,7 +163,7 @@ export async function submitResponse(input: SubmitResponseInput) {
   if (form.notifyCreator) {
     sendResponseReceived({
       formTitle:      form.title,
-      creatorEmail:   '',
+      creatorEmail:   form.creator.email,
       respondentName: input.respondentName,
       formUrl:        `${env.APP_URL}/dashboard/forms/${form.id}/responses`,
     }).catch((err: unknown) => {
@@ -183,7 +186,126 @@ export async function submitResponse(input: SubmitResponseInput) {
     });
   }
 
-  return { success: true, response: result.response };
+  return { success: true, response: result.response, duplicate: false };
+}
+
+export async function listResponses(
+  formId: string,
+  requesterId: string,
+  opts: { limit: number; cursor?: string },
+) {
+  const [form] = await db.select({ creatorId: forms.creatorId }).from(forms).where(eq(forms.id, formId)).limit(1);
+  if (!form) throw ApiError.notFound('Form not found');
+  if (form.creatorId !== requesterId) throw ApiError.forbidden('Not your form');
+
+  const conditions: SQL<unknown>[] = [eq(responses.formId, formId)];
+  if (opts.cursor) conditions.push(lt(responses.id, opts.cursor));
+
+  const rows = await db
+    .select()
+    .from(responses)
+    .where(and(...conditions))
+    .orderBy(desc(responses.createdAt))
+    .limit(opts.limit + 1);
+
+  const hasMore = rows.length > opts.limit;
+  const trimmed = hasMore ? rows.slice(0, opts.limit) : rows;
+  const nextCursor = hasMore ? trimmed[trimmed.length - 1]!.id : null;
+
+  // Fetch answers for all returned responses
+  const responseIds = trimmed.map(r => r.id);
+  let answers: typeof responseAnswers.$inferSelect[] = [];
+  if (responseIds.length > 0) {
+    answers = await db
+      .select()
+      .from(responseAnswers)
+      .where(inArray(responseAnswers.responseId, responseIds));
+  }
+
+  const fieldIds = [...new Set(answers.map(a => a.fieldId))];
+  const fieldLabels = new Map<string, string>();
+  if (fieldIds.length > 0) {
+    const fieldRows = await db
+      .select({ id: fields.id, label: fields.label })
+      .from(fields)
+      .where(inArray(fields.id, fieldIds));
+    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+  }
+
+  const answersByResponseId = new Map<string, typeof responseAnswers.$inferSelect[]>();
+  for (const answer of answers) {
+    const existing = answersByResponseId.get(answer.responseId) ?? [];
+    existing.push(answer);
+    answersByResponseId.set(answer.responseId, existing);
+  }
+
+  const items = trimmed.map(r => ({
+    ...r,
+    answers: (answersByResponseId.get(r.id) ?? []).map(a => ({
+      ...a,
+      value: a.value as string | string[],
+      fieldLabel: fieldLabels.get(a.fieldId) ?? a.fieldId,
+    })),
+  }));
+
+  return { items, nextCursor };
+}
+
+export async function getResponseById(responseId: string, requesterId: string) {
+  const [response] = await db
+    .select()
+    .from(responses)
+    .where(eq(responses.id, responseId))
+    .limit(1);
+
+  if (!response) throw ApiError.notFound('Response not found');
+
+  const [form] = await db.select({ creatorId: forms.creatorId }).from(forms).where(eq(forms.id, response.formId)).limit(1);
+  if (!form || form.creatorId !== requesterId) throw ApiError.forbidden('Not your form');
+
+  const answers = await db
+    .select()
+    .from(responseAnswers)
+    .where(eq(responseAnswers.responseId, responseId));
+
+  const fieldIds = [...new Set(answers.map(a => a.fieldId))];
+  const fieldLabels = new Map<string, string>();
+  if (fieldIds.length > 0) {
+    const fieldRows = await db
+      .select({ id: fields.id, label: fields.label })
+      .from(fields)
+      .where(inArray(fields.id, fieldIds));
+    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+  }
+
+  return {
+    ...response,
+    answers: answers.map(a => ({
+      ...a,
+      value: a.value as string | string[],
+      fieldLabel: fieldLabels.get(a.fieldId) ?? a.fieldId,
+    })),
+  };
+}
+
+export async function deleteResponse(responseId: string, requesterId: string) {
+  const [response] = await db
+    .select()
+    .from(responses)
+    .where(eq(responses.id, responseId))
+    .limit(1);
+
+  if (!response) throw ApiError.notFound('Response not found');
+
+  const [form] = await db.select({ creatorId: forms.creatorId }).from(forms).where(eq(forms.id, response.formId)).limit(1);
+  if (!form || form.creatorId !== requesterId) throw ApiError.forbidden('Not your form');
+
+  await db.delete(responses).where(eq(responses.id, responseId));
+
+  await db
+    .update(forms)
+    .set({ responseCount: sql`GREATEST(${forms.responseCount} - 1, 0)` })
+    .where(eq(forms.id, response.formId));
 }
 
 async function verifyTurnstileToken(token?: string): Promise<boolean> {

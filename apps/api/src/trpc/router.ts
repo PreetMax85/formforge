@@ -1,10 +1,10 @@
-import { router } from './trpc.js';
+import { router } from './trpc';
 import { generateOpenApiDocument } from 'trpc-to-openapi';
-import { authRouter } from './routers/auth.js';
-import { formsRouter } from './routers/forms.js';
-import { fieldsRouter } from './routers/fields.js';
-import { responsesRouter } from './routers/responses.js';
-import { analyticsRouter } from './routers/analytics.js';
+import { authRouter } from './routers/auth';
+import { formsRouter } from './routers/forms';
+import { fieldsRouter } from './routers/fields';
+import { responsesRouter } from './routers/responses';
+import { analyticsRouter } from './routers/analytics';
 
 export const appRouter = router({
   auth:      authRouter,
@@ -22,4 +22,12 @@ export const openApiDocument = generateOpenApiDocument(appRouter, {
   baseUrl:     process.env.APP_URL ?? 'http://localhost:8080',
   description: 'FormForge public API — form retrieval and submission',
   tags:        ['forms', 'responses'],
+  securitySchemes: {
+    bearerAuth: {
+      type:         'http',
+      scheme:       'bearer',
+      bearerFormat: 'JWT',
+      description:  'Paste a JWT access token here to call protected endpoints from the Try-It panel.',
+    },
+  },
 });

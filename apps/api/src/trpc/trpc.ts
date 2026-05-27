@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import type { Context } from './context.js';
+import type { Context } from './context';
 import { OpenApiMeta } from 'trpc-to-openapi';
 
 const t = initTRPC

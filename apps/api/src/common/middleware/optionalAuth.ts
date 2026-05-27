@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
-import { db } from '../db/index.js';
+import { env } from '../config/env';
+import { db } from '../db/index';
 import { tokenBlocklist } from '@repo/db/schema';
 import { eq } from 'drizzle-orm';
 

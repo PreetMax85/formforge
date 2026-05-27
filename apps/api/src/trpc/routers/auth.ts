@@ -1,5 +1,5 @@
 import type { Response, CookieOptions } from 'express';
-import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+import { router, publicProcedure, protectedProcedure } from '../trpc';
 import { SignupSchema, LoginSchema } from '@repo/shared';
 import {
   createUser,
@@ -11,19 +11,19 @@ import {
   findSessionByHash,
   blockToken,
   validateSession,
-} from '../../modules/auth/auth.service.js';
-import { AUTH_CONSTANTS } from '../../modules/auth/auth.constants.js';
+} from '../../modules/auth/auth.service';
+import { AUTH_CONSTANTS } from '../../modules/auth/auth.constants';
 import { ApiError } from '@repo/shared';
-import { env } from '../../common/config/env.js';
+import { env } from '../../common/config/env';
 import { createHash } from 'crypto';
 
 function setRefreshCookie(res: Response, token: string) {
   const cookieOptions: CookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days — actual validity enforced by JWT + DB session
   };
   if (env.COOKIE_DOMAIN) {
     cookieOptions.domain = env.COOKIE_DOMAIN;
@@ -35,7 +35,7 @@ function clearRefreshCookie(res: Response) {
   const cookieOptions: CookieOptions = {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production',
     path: '/',
   };
   if (env.COOKIE_DOMAIN) {
@@ -103,7 +103,7 @@ const authRouter = router({
     }),
 
   refresh: publicProcedure
-    .query(async ({ ctx }) => {
+    .mutation(async ({ ctx }) => {
       const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
       if (!refreshToken) {
         throw ApiError.unauthorized('No refresh token provided');
@@ -129,14 +129,11 @@ const authRouter = router({
         throw ApiError.unauthorized('Session expired or not found');
       }
 
-      // Rotate: create new tokens and save new session BEFORE revoking old one.
-      // This makes rotation more resilient to duplicate requests.
+      // Revoke old session first — prevents duplicate sessions from concurrent refresh
+      await revokeSession(refreshToken);
       const tokens = createTokens(payload.sub, payload.email);
       await saveSession(payload.sub, tokens.refresh.token, tokens.refresh.jti, ctx.req.headers['user-agent']);
       setRefreshCookie(ctx.res, tokens.refresh.token);
-
-      // Now safe to revoke the old session
-      await revokeSession(refreshToken);
 
       return {
         success: true as const,

@@ -1,10 +1,10 @@
 import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { eq } from 'drizzle-orm';
-import { db } from '../db/index.js';
+import { db } from '../db/index';
 import { tokenBlocklist } from '@repo/db/schema';
 import { ApiError } from '@repo/shared';
-import { env } from '../config/env.js';
+import { env } from '../config/env';
 
 interface TokenPayload {
   sub: string;

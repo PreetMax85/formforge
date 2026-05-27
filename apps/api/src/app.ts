@@ -9,24 +9,28 @@ const pinoHttp = pinoHttpLib as unknown as (opts?: Record<string, unknown>) => e
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { createOpenApiExpressMiddleware } from 'trpc-to-openapi';
 import { apiReference } from '@scalar/express-api-reference';
-import { env } from './common/config/env.js';
-import { logger } from './common/logger.js';
-import { appRouter, openApiDocument } from './trpc/router.js';
-import { createContext } from './trpc/context.js';
-import { errorHandler } from './common/middleware/error.js';
+import { env } from './common/config/env';
+import { logger } from './common/logger';
+import { appRouter, openApiDocument } from './trpc/router';
+import { createContext } from './trpc/context';
+import { errorHandler } from './common/middleware/error';
 import {
   globalLimiter,
   apiWriteLimiter,
   passwordResetLimiter,
-} from './common/middleware/rateLimit.js';
-import { optionalAuth } from './common/middleware/optionalAuth.js';
+  submissionLimiter,
+} from './common/middleware/rateLimit';
+import { optionalAuth } from './common/middleware/optionalAuth';
+import { asyncHandler } from './common/utils/asyncHandler';
 import { sql } from 'drizzle-orm';
 import * as Sentry from '@sentry/node';
 
 export function createApp(): express.Application {
   const app = express();
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: false,
+  }));
   app.use(cors({
     origin: env.APP_URL,
     credentials: true,
@@ -34,7 +38,29 @@ export function createApp(): express.Application {
   }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
-  app.use(pinoHttp({ logger }) as express.RequestHandler);
+  // pino-http: log one summary line per request. Default behaviour dumps the
+  // full req object including cookies (JWTs!) and the full res object including
+  // every header — both noisy and a security smell. We trim to method+url and
+  // statusCode, and skip /health to avoid spam.
+  app.use(pinoHttp({
+    logger,
+    autoLogging: {
+      ignore: (req: { url?: string }) => req.url === '/health',
+    },
+    customLogLevel: (_req: unknown, res: { statusCode: number }, err: unknown) => {
+      if (err || res.statusCode >= 500) return 'error';
+      if (res.statusCode >= 400)        return 'warn';
+      return 'info';
+    },
+    customSuccessMessage: (req: { method: string; url: string }, res: { statusCode: number }) =>
+      `${req.method} ${req.url} → ${res.statusCode}`,
+    customErrorMessage: (req: { method: string; url: string }, res: { statusCode: number }, err: Error) =>
+      `${req.method} ${req.url} ✗ ${res.statusCode} (${err.message})`,
+    serializers: {
+      req: (req: { method: string; url: string }) => ({ method: req.method, url: req.url }),
+      res: (res: { statusCode: number }) => ({ statusCode: res.statusCode }),
+    },
+  }) as express.RequestHandler);
   app.use(globalLimiter);
 
   app.use('/api/auth/login',           apiWriteLimiter);
@@ -46,6 +72,14 @@ export function createApp(): express.Application {
   app.use('/trpc/auth.login',  apiWriteLimiter);
   app.use('/trpc/auth.signup', apiWriteLimiter);
 
+  // Public form submission endpoints — stricter limiter on top of globalLimiter
+  app.use('/api/v1/responses/submit', submissionLimiter);
+  app.use('/trpc/responses.submit',    submissionLimiter);
+
+  // View count increment — rate-limited to prevent abuse
+  app.use('/api/v1/forms/:formSlug/view', submissionLimiter);
+  app.use('/trpc/forms.incrementView', submissionLimiter);
+
   app.use(optionalAuth);
 
   // tRPC internal endpoint
@@ -53,11 +87,6 @@ export function createApp(): express.Application {
 
   // OpenAPI REST adapter
   app.use('/api/v1', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
-
-  // AWS Application Load Balancer friendly alternative
-  // /api path for tRPC — works with both Express and AWS ALB
-  // Note: Scalar docs remain on separate path
-  app.use('/api', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
 
   // OpenAPI spec + Scalar docs
   app.get('/openapi.json', (_req, res) => res.json(openApiDocument));
@@ -67,10 +96,10 @@ export function createApp(): express.Application {
   }));
 
   // Health check
-  app.get('/health', async (_req, res) => {
+  app.get('/health', asyncHandler(async (_req, res) => {
     let dbStatus = 'connected';
     try {
-      const { db } = await import('./common/db/index.js');
+      const { db } = await import('./common/db/index');
       await db.execute(sql`SELECT 1`);
     } catch {
       dbStatus = 'disconnected';
@@ -82,7 +111,7 @@ export function createApp(): express.Application {
       timestamp: new Date().toISOString(),
       db: dbStatus,
     });
-  });
+  }));
 
   // Sentry error handler — must be registered before custom errorHandler
   Sentry.setupExpressErrorHandler(app);
