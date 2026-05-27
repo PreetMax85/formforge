@@ -1,5 +1,8 @@
 # FormForge — Product Requirements Document 
 
+> Status note: this document is the original starter/reference architecture. The
+> live codebase is the source of truth for what is actually implemented.
+
 ## Quick Reference
 
 | Item | Value |

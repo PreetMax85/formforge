@@ -41,8 +41,9 @@ different visual theme from the theme engine.
 
 ## Features
 
-- **Drag-and-drop form builder** with 10 field types (text, number, email,
-  select, multi-select, rating, date, file upload, long text, URL)
+- **Drag-and-drop form builder** with 10 implemented field types
+  (short text, long text, email, number, single select, multi-select, checkbox,
+  rating, date, dropdown)
 - **8 visual themes** with full CSS variable injection and animated canvas
   backgrounds
 - **Conditional logic** — show/hide fields based on previous answers (server-side
@@ -149,8 +150,8 @@ pnpm turbo run test
 Interactive OpenAPI docs powered by Scalar at
 [http://localhost:8080/docs](http://localhost:8080/docs).
 
-The spec is auto-generated from Zod schemas via `trpc-to-openapi` — zero drift
-between validation and documentation.
+The spec is generated from the same tRPC/Zod sources that power validation,
+with OpenAPI metadata added where endpoints are exposed.
 
 ---
 

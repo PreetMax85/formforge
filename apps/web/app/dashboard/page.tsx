@@ -6,10 +6,9 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "~/trpc/client";
-import { clearAccessToken, initAuth } from "~/lib/auth";
+import { clearAccessToken } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
 import LoadingScreen from "~/components/shared/LoadingScreen";
-import { useDelayedLoading } from "~/lib/hooks/useDelayedLoading";
 import { toast } from "sonner";
 import {
   Plus,
@@ -372,26 +371,13 @@ function FormCard({
 export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [authReady, setAuthReady] = useState(false);
-
-  useEffect(() => {
-    initAuth().then((ok) => {
-      if (!ok) {
-        router.push("/login");
-        return;
-      }
-      setAuthReady(true);
-    });
-  }, [router]);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    enabled: authReady,
     retry: false,
     refetchOnWindowFocus: false,
   });
 
   const myFormsQuery = trpc.forms.myForms.useQuery(undefined, {
-    enabled: authReady,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -446,24 +432,36 @@ export default function DashboardPage() {
   const totalViews = forms.reduce((sum, f) => sum + f.viewCount, 0);
   const avgEngagement = totalViews > 0 ? Math.round((totalResponses / totalViews) * 100) : 0;
 
-  const isLoading = !authReady || meQuery.isLoading || myFormsQuery.isLoading;
-  const showLoading = useDelayedLoading(isLoading);
+  const isLoading = meQuery.isLoading || myFormsQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <div
+        className="min-h-screen"
+        style={{
+          background: "#1e1e1e",
+          color: "#d4d4d4",
+          fontFamily: "'Inter', sans-serif",
+          padding: "32px",
+        }}
+      >
+        <LoadingScreen variant="inline" message="Loading dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">
-      {showLoading ? (
-        <LoadingScreen key="loading" variant="fullscreen" />
-      ) : (
-        <div
-          key="content"
-          className="min-h-screen"
-          style={{
-            background: "#1e1e1e",
-            color: "#d4d4d4",
-            fontFamily: "'Inter', sans-serif",
-            padding: "32px",
-          }}
-        >
+      <div
+        key="content"
+        className="min-h-screen"
+        style={{
+          background: "#1e1e1e",
+          color: "#d4d4d4",
+          fontFamily: "'Inter', sans-serif",
+          padding: "32px",
+        }}
+      >
       {/* ── Header ─────────────────────────────────────────────── */}
       <div
         style={{
@@ -598,8 +596,7 @@ export default function DashboardPage() {
           </Button>
         </div>
       )}
-    </div>
-      )}
+      </div>
     </AnimatePresence>
   );
 }

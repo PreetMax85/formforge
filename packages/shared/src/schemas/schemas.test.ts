@@ -6,7 +6,7 @@ const VALID_FIELD_ID = '11111111-1111-4111-8111-111111111111';
 const VALID_SOURCE_FIELD_ID = '22222222-2222-4222-8222-222222222222';
 
 describe('SubmitResponseSchema', () => {
-  it('rejects honeypot value', () => {
+  it('accepts honeypot value', () => {
     const result = SubmitResponseSchema.safeParse({
       formSlug: 'samurai-oath',
       answers:  [

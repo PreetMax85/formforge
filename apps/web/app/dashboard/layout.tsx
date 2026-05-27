@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import DashboardAuthGate from './DashboardAuthGate';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -29,5 +30,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  return <>{children}</>;
+  return <DashboardAuthGate>{children}</DashboardAuthGate>;
 }
