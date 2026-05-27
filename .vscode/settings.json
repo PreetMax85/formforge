@@ -4,5 +4,6 @@
       "mode": "auto"
     }
   ],
-  "prettier.prettierPath": "./node_modules/prettier/index.cjs"
+  "prettier.prettierPath": "./node_modules/prettier/index.cjs",
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
