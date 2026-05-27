@@ -52,8 +52,8 @@ export default function Navbar() {
           <img
             src="/logo.svg"
             alt=""
-            width={24}
-            height={24}
+            width={28}
+            height={28}
             style={{ display: 'block' }}
           />
           <span
