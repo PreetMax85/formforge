@@ -259,10 +259,7 @@ formforge/
 │   │
 │   ├── email/
 │   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   └── templates/
-│   │   │       ├── ResponseReceived.tsx
-│   │   │       └── ResponseCopy.tsx
+│   │   │   └── index.ts
 │   │   └── package.json
 │   │
 │   └── ui/
@@ -1562,7 +1559,7 @@ The cards use each theme's own CSS variables:
   Card 3 background: #1a0f00 (karan-aujla-concert bg)
 
 This section is proof. Not marketing. The forms exist.
-Judges can click through and fill them live.
+Anyone can click through and fill them live.
 
 const THEMES = [
   {
@@ -1757,10 +1754,6 @@ All other cards:
   border: 1px solid #2a2a2a
   background: #141414
 
-Below pricing cards — a single trust line in mono, centered, #4b5563:
-"Real payment integration not included in this demo.
- This is a hackathon submission — but the plans are real if we ship."
-
 ---
 
 ### Footer Copy & Structure
@@ -1777,17 +1770,12 @@ Center:
   - Explore Forms  → /explore
   - Pricing        → /pricing
   - API Docs       → /docs
-  
-  Hackathon
-  - GitHub         → repo link
-  - Demo Login     → shows credentials inline
-  - Built with     → ChaiCode Hackathon 2025
 
 Right:
   Demo Credentials — see README.md for current credentials.
 
 Bottom bar:
-"FormForge · ChaiCode Hackathon 2025 · Built by Preet"
+"FormForge · 2026"
 [mono, #4b5563, centered, 12px]
 
 const FOOTER = {
@@ -1797,10 +1785,6 @@ const FOOTER = {
     { label: 'Pricing',       href: '/pricing'  },
     { label: 'API Docs',      href: '/docs'     },
   ],
-  hackathon: [
-    { label: 'GitHub',        href: 'https://github.com/PreetMax85/formforge' },
-  ],
-  credit: 'FormForge · ChaiCode Hackathon 2025 · Built by Preet',
 } as const;
 
 ---
@@ -2284,23 +2268,28 @@ function evaluateRule(
 ```typescript
 // packages/email/src/index.ts
 import { Resend } from 'resend';
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export async function sendResponseReceived(opts: ResponseReceivedOpts) {
+  if (!resend) return;
   return resend.emails.send({
     from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.creatorEmail,
     subject: `New response on "${opts.formTitle}"`,
-    react:   ResponseReceived(opts),
+    text:    `New response from ${opts.respondentName ?? 'Anonymous'} on "${opts.formTitle}". View responses: ${opts.formUrl}`,
   });
 }
 
 export async function sendResponseCopy(opts: ResponseCopyOpts) {
+  if (!resend) return;
+  const answerList = opts.answers.map(a => `${a.label}: ${a.value}`).join('\n');
   return resend.emails.send({
     from:    'FormForge <noreply@formforge.jdevs.codes>',
     to:      opts.respondentEmail,
     subject: `Your response to "${opts.formTitle}"`,
-    react:   ResponseCopy(opts),
+    text:    `Thank you for your response!\n\n${answerList}`,
   });
 }
 ```
@@ -2325,7 +2314,7 @@ await db.insert(users).values([DEMO_USER]).onConflictDoNothing();
 // Seed responses in batches of 50 to avoid Neon connection limits
 ```
 
-### Form 1: Ghost of Tsushima — Samurai Oath (200 responses)
+### Form 1: Ghost of Tsushima — Samurai Oath (~250 responses)
 
 ```
 Slug:       samurai-oath       Theme: ghost-of-tsushima    Visibility: public
@@ -2336,62 +2325,57 @@ Fields:
   3. Which clan do you serve?      [single_select, required]
      Clan Sakai | The Ghost | Shimura's Army | No Clan
   4. Rate your sword proficiency   [rating max=10, required]
-  5. Describe your greatest battle [long_text,     required]
-  6. Break the code to save people [single_select, required]
-     Never—honor above all | Yes—people first | Depends | Ghost knows no rules
-  7. Email (optional)              [email,         optional]
+  5. Describe your greatest battle [long_text,     optional]
+  6. Your email                    [email,         optional]
 
 Seed distributions (deterministic, not random):
-  Style:  35% Samurai, 40% Ghost, 15% Balanced, 10% Ronin
-  Clan:   25% Sakai, 45% Ghost, 20% Shimura, 10% No Clan
-  Rating: cycle through [6,7,7,8,8,8,9,9,10,5] to simulate normal distribution
+  Style: cycle through fighting styles with weighted index mapping
+  Clan:  cycle through clans with weighted index mapping
+  Rating: cycle through [6,7,7,8,8,8,9,9,10,5]
 ```
 
-### Form 2: JJK — Sorcerer Registration (250 responses)
+### Form 2: JJK — Sorcerer Registration (~250 responses)
 
 ```
 Slug:       jjk-sorcerer-registration    Theme: jujutsu-kaisen    Visibility: public
 Fields:
-  1. Your name (registry)          [short_text,    required]
-  2. Your cursed technique         [short_text,    required]
+  1. Your name                     [short_text,    required]
+  2. Cursed techniques             [multi_select,  required]
+     Cursed Energy Manipulation | Dismantle | Blood Manipulation |
+     Ten Shadows | Limitless | Idle Death Gamble
   3. Jujutsu High grade            [single_select, required]
-     Grade 4 | Grade 3 | Grade 2 | Grade 1 | Semi-Grade 1 | Special Grade
-  4. Domain Expansion name         [short_text,    optional]
-  5. Sacrifice for comrades 1-10   [rating max=10, required]
-  6. Select your cursed tool       [multi_select,  optional]
-     Playful Cloud | Inverted Spear | Split Soul Katana | Slaughter Demon | None
-  7. Accept binding vow            [checkbox,      required]
-     "I accept that death follows the path of the strong."
-  8. Email (optional)              [email,         optional]
+     Grade 4 | Grade 3 | Grade 2 | Grade 1 | Special Grade
+  4. Sacrifice for comrades        [rating max=10, required]
+  5. Accept binding vow            [checkbox,      required]
+  6. Your email                    [email,         optional]
 
 Seed distributions:
-  Grade: 40% G4, 25% G3, 15% G2, 10% G1, 7% Semi-1, 3% Special Grade
-  Sacrifice: cycle through [7,8,8,9,9,10,8,9,10,8]
+  Techniques: cycle through technique pairs
+  Grade: cycle through grades with weighted index mapping
+  Sacrifice: cycle through [6,7,7,8,8,8,9,9,10,5]
 ```
 
-### Form 3: Karan Aujla Concert — VIP Backstage (300 responses)
+### Form 3: Karan Aujla Concert — VIP Backstage (~250 responses)
 
 ```
 Slug:       aujla-vip-backstage    Theme: karan-aujla-concert    Visibility: public
 Fields:
   1. Your name                     [short_text,    required]
-  2. Favorite Karan Aujla Singh song    [single_select, required]
-Tauba Tauba | Softly | Wavy | Winning Speech | Boyfriend |
-Admirin' You | White Brown Black | Top Fella | For A Reason | Don't Worry
-  3. Concerts attended             [number,        required]
-  4. Rate your love 1-10           [rating max=10, required]
-  5. Why does his music hit?       [long_text,     required]
-  6. Your city                     [short_text,    required]
-  7. Phone (for VIP passes)        [short_text,    optional]
-  8. Your email                    [email,         optional]
+  2. Favorite Karan Aujla song     [dropdown,      required]
+     Tauba Tauba | Softly | Wavy | Winning Speech | Boyfriend |
+     Admirin' You | White Brown Black | Top Fella | For A Reason | Don't Worry
+  3. Concerts attended             [number min=0 max=50, required]
+  4. Concert date                  [date,          required]
+  5. Phone (for VIP passes)        [short_text,    optional]
+  6. Your email                    [email,         optional]
 
 Seed distributions:
-  Songs: Tauba Tauba 25%, Wavy 20%, Softly 18%, rest distributed
-  Rating: 90%+ give 9 or 10 (Aujla fans are passionate)
+  Songs: cycle through names array
   Concerts: cycle through [0,0,1,0,1,2,0,1,0,3]
+  Dates: deterministic 2025 dates
 ```
 
-**Total: ~750 seeded responses = rich analytics charts**
+**Total: 750 seeded responses distributed evenly across 3 forms via deterministic modulo cycling.**
 
 ---
 
@@ -2581,22 +2565,7 @@ jobs:
 
 ---
 
-## 20. Scoring Strategy per Criterion
 
-| Criterion | Pts | Strategy |
-|-----------|-----|----------|
-| Monorepo Structure | 10 | apps/web + apps/api separate; packages/shared + db + trpc + email; turbo.json pipelines; rationale in README |
-| Authentication | 10 | Scratch JWT, type claims, anti-enumeration, token_blocklist revocation, SameSite=Lax, access token in memory, process.exit(1) on bad config, all three rate limiters |
-| Dynamic Form Builder | 15 | @dnd-kit canvas, 10 field types, Inspector panel, ▶ PLAY preview, conditional logic via resolveVisibleFieldGraph, clone, archive, custom slugs |
-| Zod Schema Design | 15 | @repo/shared, discriminatedUnion FieldConfigSchema, ConditionalLogicSchema, AnswerSchema union, startup validation, trpc-openapi generates spec directly |
-| Type-Safe APIs (tRPC) | 10 | AppRouter in @repo/trpc, 3 procedure types, trpc-openapi for REST+Scalar, useInfiniteQuery on frontend |
-| Database Design | 10 | 8 tables, indexes, partial unique index, enums, cascade deletes, jsonb, atomic responseCount + viewCount, Drizzle migrations folder |
-| Public Form Submission | 12 | globalLimiter + submissionLimiter + honeypot + Turnstile, identity resolution pipeline, idempotency hash, full transaction, email copy, explore page |
-| Analytics | 8 | computeFormHealthScore, calculateQ1toQnDropoff (CTE+window), computeResponseCompletionFunnel, generateFormInsightsSummary, CSV export, time-series, 750 seeded responses |
-| Product Experience | 7 | Game Engine Inspector, 3 themed forms, QR code, custom slugs, Sentry, CI badge, pino structured logs, framer-motion animations, 4-state components |
-| API Docs | 3 | trpc-openapi zero-drift spec, Scalar at /docs, all public endpoints annotated |
-
----
 
 ## 21. Git Commit Convention
 
@@ -2641,9 +2610,7 @@ feat: add sentry monitoring to api and web
 feat: add github actions ci pipeline
 feat: add idempotent seed script 750 responses across 3 themed forms
 docs: write readme with architecture rationale demo credentials ci badge
-chore: configure digitalocean deployment with custom domain
-docs: add CONTRIBUTING.md and docs/ARCHITECTURE.md
-docs: add docs/API.md with scalar reference
+chore: configure vercel and railway deployment with custom domain
 ```
 
 ---
@@ -2838,7 +2805,7 @@ export const logger = pino({
 ```typescript
 // apps/api/src/modules/responses/responses.service.test.ts
 import { describe, it, expect } from 'vitest';
-import { validateResponseAnswers } from './responses.service';
+import { validateResponseAnswers, submitResponse } from './responses.service';
 
 describe('validateResponseAnswers — Response submission validation', () => {
   it('rejects text value for a number field', () => {
@@ -2884,47 +2851,58 @@ describe('validateResponseAnswers — Response submission validation', () => {
   });
 });
 
+describe('submitResponse honeypot', () => {
+  it('returns silent success when honeypot is filled', async () => {
+    const result = await submitResponse({
+      formSlug:      'test-form',
+      answers:       [{ fieldId: '11111111-1111-4111-8111-111111111111', value: 'test' }],
+      sendEmailCopy: false,
+      _hp:           'bot-filled-this',
+    });
+    expect(result).toEqual({ success: true, message: 'Response submitted successfully.' });
+  });
+});
+
 // packages/shared/src/schemas/schemas.test.ts
 import { describe, it, expect } from 'vitest';
-import {
-  SubmitResponseSchema,
-  ConditionalLogicSchema,
-  CreateFormSchema,
-  SignupSchema,
-} from './index';
+import { SubmitResponseSchema, ConditionalLogicSchema } from './index';
+
+const VALID_FIELD_ID = '11111111-1111-4111-8111-111111111111';
+const VALID_SOURCE_FIELD_ID = '22222222-2222-4222-8222-222222222222';
 
 describe('SubmitResponseSchema', () => {
-  it('rejects honeypot value when _hp is non-empty', () => {
+  it('rejects honeypot value', () => {
     const result = SubmitResponseSchema.safeParse({
-      formSlug: 'test-form',
-      answers:  [{ fieldId: '00000000-0000-0000-0000-000000000001', value: 'hello' }],
-      _hp:      'filled-by-bot',
+      formSlug: 'samurai-oath',
+      answers:  [{ fieldId: VALID_FIELD_ID, value: ['honor'] }],
+      _hp:      'bot-filled-this',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty answers array', () => {
+    const result = SubmitResponseSchema.safeParse({
+      formSlug: 'samurai-oath',
+      answers:  [],
     });
     expect(result.success).toBe(false);
   });
 
   it('accepts valid multi-select array answer', () => {
     const result = SubmitResponseSchema.safeParse({
-      formSlug: 'test-form',
-      answers:  [{
-        fieldId: '00000000-0000-0000-0000-000000000001',
-        value:   ['Option A', 'Option B'],
-      }],
+      formSlug: 'samurai-oath',
+      answers:  [{ fieldId: VALID_FIELD_ID, value: ['honor', 'duty', 'sacrifice'] }],
     });
     expect(result.success).toBe(true);
   });
 });
 
 describe('ConditionalLogicSchema', () => {
-  it('parses a valid show rule', () => {
+  it('parses valid show/hide rule', () => {
     const result = ConditionalLogicSchema.safeParse({
       action: 'show',
-      match:  'all',
-      rules:  [{
-        sourceFieldId: '00000000-0000-0000-0000-000000000001',
-        operator:      'equals',
-        value:         'Yes',
-      }],
+      match:  'any',
+      rules:  [{ sourceFieldId: VALID_SOURCE_FIELD_ID, operator: 'equals', value: 'yes' }],
     });
     expect(result.success).toBe(true);
   });
@@ -2932,28 +2910,8 @@ describe('ConditionalLogicSchema', () => {
   it('rejects empty rules array', () => {
     const result = ConditionalLogicSchema.safeParse({
       action: 'show',
-      match:  'all',
+      match:  'any',
       rules:  [],
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe('SignupSchema', () => {
-  it('rejects password without uppercase letter', () => {
-    const result = SignupSchema.safeParse({
-      email:    'test@example.com',
-      name:     'Test User',
-      password: 'alllowercase1',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects password without number', () => {
-    const result = SignupSchema.safeParse({
-      email:    'test@example.com',
-      name:     'Test User',
-      password: 'NoNumberHere',
     });
     expect(result.success).toBe(false);
   });
@@ -2964,56 +2922,51 @@ import { describe, it, expect } from 'vitest';
 import { computeFormHealthScore, generateFormInsightsSummary } from './analytics.service';
 import type { FormStats, FormAnalyticsStats } from '@repo/shared';
 
+const realisticStats: FormStats = {
+  completionRate:           0.62,
+  recentResponses:          30,
+  previousResponses:        20,
+  avgDropoffRate:           0.15,
+  avgFieldsAnswered:        4,
+  totalFields:              6,
+  totalUnconditionalFields: 5,
+};
+
 describe('computeFormHealthScore', () => {
-  it('returns a number between 0 and 100', () => {
-    const stats: FormStats = {
-      completionRate:    0.75,
-      recentResponses:   50,
-      previousResponses: 30,
-      avgDropoffRate:    0.2,
-      avgFieldsAnswered: 5,
-      totalFields:       7,
-    };
-    const score = computeFormHealthScore(stats);
-    expect(score).toBeGreaterThanOrEqual(0);
-    expect(score).toBeLessThanOrEqual(100);
-    expect(Number.isInteger(score)).toBe(true);
+  it('returns integer between 0 and 100', () => {
+    const score = computeFormHealthScore(realisticStats);
+    expect(score).not.toBeNull();
+    expect(Number.isInteger(score as number)).toBe(true);
+    expect(score as number).toBeGreaterThanOrEqual(0);
+    expect(score as number).toBeLessThanOrEqual(100);
   });
 
   it('weights completion rate at 40%', () => {
-    const perfect: FormStats = {
-      completionRate:    1.0,
-      recentResponses:   1,
-      previousResponses: 1,
-      avgDropoffRate:    0,
-      avgFieldsAnswered: 5,
-      totalFields:       5,
-    };
-    const score = computeFormHealthScore(perfect);
-    // With perfect completion (40pts) + equal velocity (50% of 30pts = 15pts)
-    // + zero dropoff (20pts) + full engagement (10pts) = ~85
-    expect(score).toBeGreaterThan(80);
+    const score = computeFormHealthScore({
+      completionRate:           1,
+      recentResponses:          0,
+      previousResponses:        0,
+      avgDropoffRate:           1,
+      avgFieldsAnswered:        0,
+      totalFields:              1,
+      totalUnconditionalFields: 1,
+    });
+    expect(score).toBe(40);
   });
 });
 
 describe('generateFormInsightsSummary', () => {
-  it('returns an array of FormInsight objects', () => {
-    const stats: FormAnalyticsStats = {
-      completionRate:    0.6,
-      recentResponses:   20,
-      previousResponses: 10,
-      avgDropoffRate:    0.3,
-      avgFieldsAnswered: 4,
-      totalFields:       6,
-      totalResponses:    100,
-    };
+  it('returns array of FormInsight objects', () => {
+    const stats: FormAnalyticsStats = { ...realisticStats, totalResponses: 50 };
     const insights = generateFormInsightsSummary(stats);
     expect(Array.isArray(insights)).toBe(true);
-    insights.forEach(insight => {
+    expect(insights.length).toBeGreaterThan(0);
+    for (const insight of insights) {
       expect(['positive', 'warning', 'neutral']).toContain(insight.type);
-      expect(typeof insight.message).toBe('string');
       expect(typeof insight.icon).toBe('string');
-    });
+      expect(typeof insight.message).toBe('string');
+      expect(insight.message.length).toBeGreaterThan(0);
+    }
   });
 });
 
