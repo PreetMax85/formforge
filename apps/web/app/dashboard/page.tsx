@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "~/trpc/client";
 import { clearAccessToken, initAuth } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
@@ -442,21 +442,23 @@ export default function DashboardPage() {
   const totalViews = forms.reduce((sum, f) => sum + f.viewCount, 0);
   const avgEngagement = totalViews > 0 ? Math.round((totalResponses / totalViews) * 100) : 0;
 
-  /* 4-state pattern */
-  if (!authReady || meQuery.isLoading || myFormsQuery.isLoading) {
-    return <LoadingScreen variant="fullscreen" />;
-  }
+  const isLoading = !authReady || meQuery.isLoading || myFormsQuery.isLoading;
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "#1e1e1e",
-        color: "#d4d4d4",
-        fontFamily: "'Inter', sans-serif",
-        padding: "32px",
-      }}
-    >
+    <AnimatePresence mode="wait">
+      {isLoading ? (
+        <LoadingScreen key="loading" variant="fullscreen" />
+      ) : (
+        <div
+          key="content"
+          className="min-h-screen"
+          style={{
+            background: "#1e1e1e",
+            color: "#d4d4d4",
+            fontFamily: "'Inter', sans-serif",
+            padding: "32px",
+          }}
+        >
       {/* ── Header ─────────────────────────────────────────────── */}
       <div
         style={{
@@ -592,5 +594,7 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+      )}
+    </AnimatePresence>
   );
 }

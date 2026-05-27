@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { trpc } from '~/trpc/client';
 import { FORM_THEMES, THEME_META } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { toast } from 'sonner';
 
@@ -239,14 +240,6 @@ export default function FormSettingsPage({
   }
 
   /* ── 4-state pattern ─────────────────────────────────────────── */
-  if (formQuery.isLoading) {
-    return (
-      <div style={{ padding: '24px' }}>
-        <LoadingScreen variant="inline" message="Loading settings..." />
-      </div>
-    );
-  }
-
   if (formQuery.error) {
     return (
       <div
@@ -263,7 +256,13 @@ export default function FormSettingsPage({
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: '24px', maxWidth: '800px' }}>
+    <AnimatePresence mode="wait">
+      {formQuery.isLoading ? (
+        <div key="loading" style={{ padding: '24px' }}>
+          <LoadingScreen variant="inline" message="Loading settings..." />
+        </div>
+      ) : (
+        <div key="content" style={{ padding: '24px', maxWidth: '800px' }}>
 
       {/* ── Basic info ───────────────────────────────────────────── */}
       <Section title="Basic Info">
@@ -520,6 +519,8 @@ export default function FormSettingsPage({
           {updateMutation.isPending ? 'SAVING...' : 'SAVE SETTINGS'}
         </button>
       </div>
-    </div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

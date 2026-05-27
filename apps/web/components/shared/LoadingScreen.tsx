@@ -369,19 +369,26 @@ export default function LoadingScreen({
   // Pick 5 messages once on mount — stable across re-renders
   const lines = useMemo(() => samplePool(5), []);
 
-  const [linesVisible,  setLinesVisible]  = useState(0);
-  const [checksVisible, setChecksVisible] = useState(0);
+  const INITIAL_LINES  = 3;
+  const INITIAL_CHECKS = 2;
 
-  // Drive line reveals: 6 lines total (5 pool + Scene ready), 200ms apart
+  const [linesVisible,  setLinesVisible]  = useState(INITIAL_LINES);
+  const [checksVisible, setChecksVisible] = useState(INITIAL_CHECKS);
+
+  // Drive line reveals: 6 lines total (5 pool + Scene ready), 200ms apart.
+  // First 3 lines pre-render instantly so the screen is meaningful even on sub-500ms loads.
   useEffect(() => {
     const totalLines = lines.length + 1; // +1 for Scene ready
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    for (let i = 0; i < totalLines; i++) {
-      timers.push(setTimeout(() => setLinesVisible(i + 1), i * LINE_INTERVAL_MS + 320));
+    // Checkmark for the last pre-rendered pool line appears after a brief delay
+    timers.push(setTimeout(() => setChecksVisible(INITIAL_LINES), CHECK_DELAY_MS));
+
+    for (let i = INITIAL_LINES; i < totalLines; i++) {
+      const t = (i - INITIAL_LINES + 1) * LINE_INTERVAL_MS;
+      timers.push(setTimeout(() => setLinesVisible(i + 1), t));
       if (i < totalLines - 1) {
-        // Checkmarks for all except "Scene ready"
-        timers.push(setTimeout(() => setChecksVisible(i + 1), i * LINE_INTERVAL_MS + 320 + CHECK_DELAY_MS));
+        timers.push(setTimeout(() => setChecksVisible(i + 1), t + CHECK_DELAY_MS));
       }
     }
     return () => timers.forEach(clearTimeout);

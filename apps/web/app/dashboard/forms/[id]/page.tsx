@@ -19,6 +19,7 @@ import {
 import Link from 'next/link';
 import QRCodeModal from '~/components/shared/QRCodeModal';
 import LoadingScreen from '~/components/shared/LoadingScreen';
+import { AnimatePresence } from 'framer-motion';
 
 /* ── Loading skeleton ─────────────────────────────────────────────── */
 function Skeleton({ h = 200 }: { h?: number }) {
@@ -123,14 +124,6 @@ export default function FormOverviewPage({
     );
   }
 
-  if (formQuery.isLoading) {
-    return (
-      <div style={{ padding: '32px' }}>
-        <LoadingScreen variant="inline" message="Loading analytics..." />
-      </div>
-    );
-  }
-
   if (!formQuery.data) {
     return (
       <div
@@ -165,14 +158,20 @@ export default function FormOverviewPage({
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <>
-    <div
-      style={{
-        padding:    '24px',
-        color:      '#d4d4d4',
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
+    <AnimatePresence mode="wait">
+      {formQuery.isLoading ? (
+        <div key="loading" style={{ padding: '32px' }}>
+          <LoadingScreen variant="inline" message="Loading analytics..." />
+        </div>
+      ) : (
+        <>
+        <div
+          style={{
+            padding:    '24px',
+            color:      '#d4d4d4',
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
       {/* ── Form header ────────────────────────────────────────── */}
       <div
         style={{
@@ -412,14 +411,16 @@ export default function FormOverviewPage({
       ) : (
         <FieldBreakdown data={dropoffQuery.data?.data ?? []} />
       )}
-    </div>
+        </div>
 
-    <QRCodeModal
-      isOpen={qrOpen}
-      onClose={() => setQrOpen(false)}
-      url={publicUrl}
-      formTitle={form.title}
-    />
-    </>
+        <QRCodeModal
+          isOpen={qrOpen}
+          onClose={() => setQrOpen(false)}
+          url={publicUrl}
+          formTitle={form.title}
+        />
+        </>
+      )}
+    </AnimatePresence>
   );
 }
