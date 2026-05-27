@@ -30,7 +30,6 @@ const cleanupTimer = setInterval(async () => {
   }
 }, 15 * 60 * 1000);
 
-// TODO: Remove after judging — keep-alive prevents Neon cold starts during demo week
 const keepAliveTimer = setInterval(async () => {
   try {
     await db.execute(sql`SELECT 1`);

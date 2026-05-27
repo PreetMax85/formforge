@@ -52,12 +52,20 @@ export default function SignupPage() {
       toast.error("Password must be at least 8 characters");
       return;
     }
+    if (!/[A-Z]/.test(password)) {
+      toast.error("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error("Password must contain at least one number");
+      return;
+    }
     signupMutation.mutate({ name: name.trim(), email, password });
   };
 
   return (
     <AuthShell
-      title="FormForge.Auth.Signup"
+      title="signup"
       footer={
         <>
           <span
@@ -176,7 +184,7 @@ export default function SignupPage() {
               marginBottom:  "6px",
             }}
           >
-            PASSWORD_HASH
+            PASSWORD
           </Label>
           <Input
             id="password"
@@ -187,16 +195,6 @@ export default function SignupPage() {
             className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
             required
           />
-          <p
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize:   "9px",
-              color:      "#4b5563",
-              marginTop:  "5px",
-            }}
-          >
-            // min 8 chars · 1 uppercase · 1 number
-          </p>
         </div>
 
         {/* Confirm Password */}
@@ -212,7 +210,7 @@ export default function SignupPage() {
               marginBottom:  "6px",
             }}
           >
-            CONFIRM_HASH
+            CONFIRM PASSWORD
           </Label>
           <Input
             id="confirmPassword"
@@ -252,7 +250,6 @@ export default function SignupPage() {
         </Button>
       </form>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </AuthShell>
   );
 }

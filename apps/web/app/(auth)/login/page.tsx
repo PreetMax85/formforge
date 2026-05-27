@@ -47,7 +47,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title="FormForge.Auth.Login"
+      title="login"
       footer={
         <>
           <span
@@ -100,34 +100,6 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Demo credentials hint */}
-      <div
-        style={{
-          background:    "#141414",
-          border:        "1px solid #2a2a2a",
-          borderLeft:    "3px solid #569cd6",
-          padding:       "10px 12px",
-          marginBottom:  "20px",
-          display:       "flex",
-          flexDirection: "column",
-          gap:           "3px",
-        }}
-      >
-        <span
-          style={{
-            fontFamily:    "var(--font-mono)",
-            fontSize:      "9px",
-            color:         "#569cd6",
-            letterSpacing: "0.1em",
-          }}
-        >
-          // DEMO CREDENTIALS
-        </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "#9ca3af" }}>
-          demo@formforge.tech &nbsp;/&nbsp; Demo@FormForge2026
-        </span>
-      </div>
-
       <form onSubmit={handleSubmit}>
         {/* Email field */}
         <div style={{ marginBottom: "16px" }}>
@@ -174,7 +146,7 @@ export default function LoginPage() {
                 letterSpacing: "0.08em",
               }}
             >
-              PASSWORD_HASH
+              PASSWORD
             </Label>
             <Link
               href="/forgot-password"
@@ -227,7 +199,6 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </AuthShell>
   );
 }

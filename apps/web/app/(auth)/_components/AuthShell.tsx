@@ -390,7 +390,7 @@ export default function AuthShell({ title, children, footer }: AuthShellProps) {
             color:         '#242424',
             letterSpacing: '0.08em',
           }}>
-            FORMFORGE ENGINE v1.0.0 — ChaiCode Hackathon 2025
+            FORMFORGE ENGINE v1.0.0
           </div>
         </motion.div>
       </div>

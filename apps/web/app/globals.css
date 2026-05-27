@@ -143,6 +143,12 @@
 }
 
 
+/* ── Auth button spinner ─────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
 /* ── Game Engine Inspector CSS variables (:root = dashboard always) ─── */
 :root {
   --bg-primary:      #1e1e1e;
