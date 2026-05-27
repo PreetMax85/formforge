@@ -9,6 +9,7 @@ import { setAccessToken } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import AuthShell from "../_components/AuthShell";
 
@@ -19,6 +20,8 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: async (res) => {
@@ -189,15 +192,38 @@ export default function SignupPage() {
           >
             PASSWORD
           </Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
-            required
-          />
+          <div style={{ position: 'relative' }}>
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              style={{
+                position:   'absolute',
+                right:      '10px',
+                top:        '50%',
+                transform:  'translateY(-50%)',
+                background: 'transparent',
+                border:     'none',
+                color:      '#9ca3af',
+                cursor:     'pointer',
+                padding:    '4px',
+                display:    'flex',
+                alignItems: 'center',
+              }}
+              tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
           {/* Password requirements checklist */}
           <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             {[
@@ -246,15 +272,38 @@ export default function SignupPage() {
           >
             CONFIRM PASSWORD
           </Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
-            required
-          />
+          <div style={{ position: 'relative' }}>
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((s) => !s)}
+              style={{
+                position:   'absolute',
+                right:      '10px',
+                top:        '50%',
+                transform:  'translateY(-50%)',
+                background: 'transparent',
+                border:     'none',
+                color:      '#9ca3af',
+                cursor:     'pointer',
+                padding:    '4px',
+                display:    'flex',
+                alignItems: 'center',
+              }}
+              tabIndex={-1}
+              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* Submit */}
