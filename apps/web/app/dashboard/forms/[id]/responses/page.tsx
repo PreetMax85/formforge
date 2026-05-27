@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '~/components/shared/LoadingScreen';
+import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface Answer {
@@ -526,6 +527,8 @@ export default function ResponsesPage({
     URL.revokeObjectURL(url);
   }
 
+  const showLoading = useDelayedLoading(isLoading);
+
   /* ── 4-state async pattern ───────────────────────────────────── */
   if (error) {
     return (
@@ -575,7 +578,7 @@ export default function ResponsesPage({
   /* ── Render ──────────────────────────────────────────────────── */
   return (
     <AnimatePresence mode="wait">
-      {isLoading ? (
+      {showLoading ? (
         <div key="loading" style={{ padding: '24px' }}>
           <LoadingScreen variant="inline" message="Fetching responses..." />
         </div>

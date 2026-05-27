@@ -20,6 +20,7 @@ import Link from 'next/link';
 import QRCodeModal from '~/components/shared/QRCodeModal';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { AnimatePresence } from 'framer-motion';
+import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
 /* ── Loading skeleton ─────────────────────────────────────────────── */
 function Skeleton({ h = 200 }: { h?: number }) {
@@ -156,10 +157,12 @@ export default function FormOverviewPage({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const showLoading = useDelayedLoading(formQuery.isLoading);
+
   /* ── Render ──────────────────────────────────────────────────── */
   return (
     <AnimatePresence mode="wait">
-      {formQuery.isLoading ? (
+      {showLoading ? (
         <div key="loading" style={{ padding: '32px' }}>
           <LoadingScreen variant="inline" message="Loading analytics..." />
         </div>

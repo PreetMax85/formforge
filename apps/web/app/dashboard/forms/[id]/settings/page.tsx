@@ -7,6 +7,7 @@ import { FORM_THEMES, THEME_META } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '~/components/shared/LoadingScreen';
+import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 import { toast } from 'sonner';
 
 /* ── Shared input styles ──────────────────────────────────────────── */
@@ -254,10 +255,12 @@ export default function FormSettingsPage({
 
   if (!form) return null;
 
+  const showLoading = useDelayedLoading(formQuery.isLoading);
+
   /* ── Render ──────────────────────────────────────────────────── */
   return (
     <AnimatePresence mode="wait">
-      {formQuery.isLoading ? (
+      {showLoading ? (
         <div key="loading" style={{ padding: '24px' }}>
           <LoadingScreen variant="inline" message="Loading settings..." />
         </div>

@@ -28,6 +28,7 @@ import { BuilderCanvas, DROPPABLE_ID } from '~/components/builder/BuilderCanvas'
 import { PublishModal } from '~/components/builder/PublishModal';
 import { FormRenderer } from '~/components/form/FormRenderer';
 import LoadingScreen from '~/components/shared/LoadingScreen';
+import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
 import type { Field, FieldType } from '~/lib/types/field';
 
@@ -336,7 +337,8 @@ export default function BuilderPage() {
   const activeField = fields.find((f) => f.id === activeFieldId) ?? null;
 
   /* ── 4-state async pattern ───────────────────────────────────── */
-  if (isLoading) {
+  const showLoading = useDelayedLoading(isLoading);
+  if (showLoading) {
     return <LoadingScreen variant="fullscreen" />;
   }
 

@@ -8,6 +8,7 @@ import { trpc } from "~/trpc/client";
 import { clearAccessToken, initAuth } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
 import LoadingScreen from "~/components/shared/LoadingScreen";
+import { useDelayedLoading } from "~/lib/hooks/useDelayedLoading";
 import { toast } from "sonner";
 import {
   Plus,
@@ -443,10 +444,11 @@ export default function DashboardPage() {
   const avgEngagement = totalViews > 0 ? Math.round((totalResponses / totalViews) * 100) : 0;
 
   const isLoading = !authReady || meQuery.isLoading || myFormsQuery.isLoading;
+  const showLoading = useDelayedLoading(isLoading);
 
   return (
     <AnimatePresence mode="wait">
-      {isLoading ? (
+      {showLoading ? (
         <LoadingScreen key="loading" variant="fullscreen" />
       ) : (
         <div
