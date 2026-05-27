@@ -307,8 +307,7 @@ export default function PricingPage() {
             margin:     '32px auto 0',
           }}
         >
-          Real payment integration not included in this demo.
-          This is a hackathon submission — but the plans are real if we ship.
+          Real payment integration not included yet. Plans are real if we ship.
         </p>
       </section>
     </main>

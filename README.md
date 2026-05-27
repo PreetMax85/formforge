@@ -51,7 +51,7 @@ different visual theme from the theme engine.
   persistence
 - **Analytics dashboard** — health score, Q1→Qn dropoff funnel,
   views→submit completion funnel, per-field breakdowns, time-series charts,
-  AI-generated insight cards
+  rule-based insight cards
 - **Identity resolution pipeline** — honeypot anti-spam → Turnstile CAPTCHA →
   spam cluster detection → 30s deduplication hash → transactional insert
 - **Tiered rate limiting** — global, write, submission, and password-reset

@@ -21,7 +21,7 @@ const jetbrainsMono = localFont({
 
 export const metadata: Metadata = {
   title: "FormForge — The Game Engine for Forms",
-  description: "Build forms like a game developer. Drag, configure, publish — all in a Unity-style inspector.",  // FormForge — hackathon project, no SEO needed
+  description: "Build forms like a game developer. Drag, configure, publish — all in a Unity-style inspector.",
 };
 
 export default function RootLayout({
