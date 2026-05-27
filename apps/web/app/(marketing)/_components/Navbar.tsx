@@ -44,16 +44,29 @@ export default function Navbar() {
         {/* Brand */}
         <Link
           href="/"
+          className="flex items-center gap-2"
           style={{
-            fontFamily:    "'JetBrains Mono', monospace",
-            fontSize:      '13px',
-            fontWeight:    700,
-            color:         '#d4d4d4',
-            letterSpacing: '0.06em',
-            textDecoration:'none',
+            textDecoration: 'none',
           }}
         >
-          FORMFORGE
+          <img
+            src="/logo.svg"
+            alt=""
+            width={24}
+            height={24}
+            style={{ display: 'block' }}
+          />
+          <span
+            style={{
+              fontFamily:    "'JetBrains Mono', monospace",
+              fontSize:      '13px',
+              fontWeight:    700,
+              color:         '#d4d4d4',
+              letterSpacing: '0.06em',
+            }}
+          >
+            FORMFORGE
+          </span>
         </Link>
 
         {/* Center nav */}
