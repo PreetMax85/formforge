@@ -63,7 +63,7 @@ const EXIT_MS      = 650;
  * - sessionStorage prevents re-showing on the same tab session
  */
 export default function BootScreen(): React.JSX.Element | null {
-  const [isVisible,    setIsVisible]    = useState(false);
+  const [isVisible,    setIsVisible]    = useState(true);   // ← start visible to prevent flash
   const [isDismissing, setIsDismissing] = useState(false);
   const [linesShown,   setLinesShown]   = useState(0);
   const [checksShown,  setChecksShown]  = useState(0);
@@ -82,16 +82,20 @@ export default function BootScreen(): React.JSX.Element | null {
     }, EXIT_MS);
   }, []);
 
-  // On mount: check sessionStorage, schedule all line reveals
+  // On mount: check sessionStorage, hide immediately if already seen,
+  // otherwise schedule all line reveals for first-time visitors.
   useEffect(() => {
     try {
-      if (sessionStorage.getItem('formforge-intro-seen')) return;
+      if (sessionStorage.getItem('formforge-intro-seen')) {
+        setIsVisible(false);   // already seen — hide immediately, no flash
+        return;
+      }
     } catch {
       // sessionStorage blocked (private browsing etc.) — skip boot screen
+      setIsVisible(false);
       return;
     }
 
-    setIsVisible(true);
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     bootLines.forEach((line, i) => {
