@@ -198,6 +198,37 @@ export default function SignupPage() {
             className="bg-[#1e1e1e] border-[#3c3c3c] text-[#d4d4d4] placeholder:text-[#4b5563] focus:border-[#569cd6] focus:ring-0 rounded-none font-mono text-sm"
             required
           />
+          {/* Password requirements checklist */}
+          <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {[
+              { label: 'At least 8 characters', met: password.length >= 8 },
+              { label: 'One uppercase letter', met: /[A-Z]/.test(password) },
+              { label: 'One number', met: /[0-9]/.test(password) },
+            ].map((rule) => (
+              <div key={rule.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    fontSize:     '10px',
+                    fontFamily:   "'JetBrains Mono', monospace",
+                    color:        rule.met ? '#66bb6a' : '#4b5563',
+                    transition:   'color 0.2s',
+                  }}
+                >
+                  {rule.met ? '✓' : '○'}
+                </span>
+                <span
+                  style={{
+                    fontSize:     '11px',
+                    fontFamily:   "'JetBrains Mono', monospace",
+                    color:        rule.met ? '#9ca3af' : '#4b5563',
+                    transition:   'color 0.2s',
+                  }}
+                >
+                  {rule.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Confirm Password */}
