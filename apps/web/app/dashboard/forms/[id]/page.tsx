@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import QRCodeModal from '~/components/shared/QRCodeModal';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 
 /* ── Loading skeleton ─────────────────────────────────────────────── */
 function Skeleton({ h = 200 }: { h?: number }) {
@@ -124,14 +125,8 @@ export default function FormOverviewPage({
 
   if (formQuery.isLoading) {
     return (
-      <div style={{ padding: '32px', display: 'grid', gap: '16px' }}>
-        <Skeleton h={48} />
-        <div className="grid grid-cols-4" style={{ gap: '16px' }}>
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} h={80} />)}
-        </div>
-        <div className="grid grid-cols-2" style={{ gap: '16px' }}>
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} h={220} />)}
-        </div>
+      <div style={{ padding: '32px' }}>
+        <LoadingScreen variant="inline" message="Loading analytics..." />
       </div>
     );
   }

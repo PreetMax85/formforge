@@ -27,6 +27,7 @@ import { FieldPalette } from '~/components/builder/FieldPalette';
 import { BuilderCanvas, DROPPABLE_ID } from '~/components/builder/BuilderCanvas';
 import { PublishModal } from '~/components/builder/PublishModal';
 import { FormRenderer } from '~/components/form/FormRenderer';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 
 import type { Field, FieldType } from '~/lib/types/field';
 
@@ -336,7 +337,7 @@ export default function BuilderPage() {
 
   /* ── 4-state async pattern ───────────────────────────────────── */
   if (isLoading) {
-    return <FullscreenMessage>Compiling shaders...</FullscreenMessage>;
+    return <LoadingScreen variant="fullscreen" />;
   }
 
   if (error) {

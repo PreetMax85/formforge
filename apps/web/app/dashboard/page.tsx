@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { trpc } from "~/trpc/client";
 import { clearAccessToken, initAuth } from "~/lib/auth";
 import { Button } from "~/components/ui/button";
-import LoadingState from "~/components/shared/LoadingState";
+import LoadingScreen from "~/components/shared/LoadingScreen";
 import { toast } from "sonner";
 import {
   Plus,
@@ -444,11 +444,7 @@ export default function DashboardPage() {
 
   /* 4-state pattern */
   if (!authReady || meQuery.isLoading || myFormsQuery.isLoading) {
-    return (
-      <div className="bg-[#1e1e1e] min-h-screen flex items-center justify-center">
-        <LoadingState message="Compiling shaders..." />
-      </div>
-    );
+    return <LoadingScreen variant="fullscreen" />;
   }
 
   return (

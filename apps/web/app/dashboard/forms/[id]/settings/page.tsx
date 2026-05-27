@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { trpc } from '~/trpc/client';
 import { FORM_THEMES, THEME_META } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import { toast } from 'sonner';
 
 /* ── Shared input styles ──────────────────────────────────────────── */
@@ -240,18 +241,8 @@ export default function FormSettingsPage({
   /* ── 4-state pattern ─────────────────────────────────────────── */
   if (formQuery.isLoading) {
     return (
-      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              height:    '160px',
-              background:'#141414',
-              border:    '1px solid #2a2a2a',
-              animation: 'skeleton-pulse 1.5s infinite',
-            }}
-          />
-        ))}
+      <div style={{ padding: '24px' }}>
+        <LoadingScreen variant="inline" message="Loading settings..." />
       </div>
     );
   }

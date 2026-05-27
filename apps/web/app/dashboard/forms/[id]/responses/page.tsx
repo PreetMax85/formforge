@@ -7,6 +7,7 @@ import {
   Inbox, ChevronDown, ChevronUp, Trash2,
   Mail, User, Clock, Download,
 } from 'lucide-react';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 interface Answer {
@@ -528,10 +529,7 @@ export default function ResponsesPage({
   if (isLoading) {
     return (
       <div style={{ padding: '24px' }}>
-        <div style={{ height: '36px', background: '#141414', border: '1px solid #2a2a2a', marginBottom: '16px', animation: 'skeleton-pulse 1.5s infinite' }} />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} style={{ height: '60px', background: '#141414', border: '1px solid #2a2a2a', marginBottom: '8px', animation: 'skeleton-pulse 1.5s infinite' }} />
-        ))}
+        <LoadingScreen variant="inline" message="Fetching responses..." />
       </div>
     );
   }
