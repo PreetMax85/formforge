@@ -105,7 +105,7 @@ export default function Footer() {
           letterSpacing: '0.04em',
         }}
       >
-        &copy; 2025 FormForge
+        &copy; 2026 FormForge
       </div>
     </footer>
   );

@@ -187,7 +187,7 @@ async function seed() {
         [fieldSet[0]!.id]: aujlaAnswers.names[i % 10]!,
         [fieldSet[1]!.id]: aujlaAnswers.songs[i % 10]!,
         [fieldSet[2]!.id]: String([0, 0, 1, 0, 1, 2, 0, 1, 0, 3][i % 10]!),
-        [fieldSet[3]!.id]: `2025-0${1 + (i % 9)}-${String(10 + (i % 20)).padStart(2, '0')}`,
+        [fieldSet[3]!.id]: `2026-0${1 + (i % 9)}-${String(10 + (i % 20)).padStart(2, '0')}`,
         [fieldSet[4]!.id]: `+91 98${String(i).padStart(8, '0').slice(0, 8)}`,
         [fieldSet[5]!.id]: `fan${i}@aujla.in`,
       };

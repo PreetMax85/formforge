@@ -2375,7 +2375,7 @@ Fields:
 Seed distributions:
   Songs: cycle through names array
   Concerts: cycle through [0,0,1,0,1,2,0,1,0,3]
-  Dates: deterministic 2025 dates
+  Dates: deterministic 2026 dates
 ```
 
 **Total: 750 seeded responses distributed evenly across 3 forms via deterministic modulo cycling.**
