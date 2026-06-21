@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { trpc } from '~/trpc/client';
 import { createFormStore } from '~/lib/store/formStore';
+import { resolveVisibleFieldGraph } from '@repo/shared';
 import { ProgressBar } from './ProgressBar';
 import { FormField } from './FormField';
 import { ThankYouScreen } from './ThankYouScreen';
@@ -71,11 +72,10 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
     setAnswer,
     nextStep,
     prevStep,
+    setCurrentStep,
     setSubmitting,
     setSubmitted,
     reset,
-    getVisibleFields,
-    getProgress,
   } = useFormStore();
 
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -88,12 +88,26 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
   /* ── Enter key advances to next step ──────────────────────────── */
   const handleNextRef = useRef<() => void>(() => {});
 
-  /* Visible fields respects conditional logic */
-  const visibleFields = getVisibleFields(formConfig.fields as unknown as SharedField[]);
-  const totalSteps    = visibleFields.length;
-  const currentField  = visibleFields[Math.min(currentStep, visibleFields.length - 1)] ?? null;
-  const isLastStep    = currentStep === totalSteps - 1;
-  const progress      = getProgress(formConfig.fields as unknown as SharedField[]);
+  /* Visible fields respects conditional logic — memoized to avoid O(n) per keystroke */
+  const visibleFields = useMemo(
+    () => resolveVisibleFieldGraph(formConfig.fields as unknown as SharedField[], answers) as unknown as Field[],
+    [formConfig.fields, answers],
+  );
+  const totalSteps   = visibleFields.length;
+  const clampedStep  = Math.min(currentStep, Math.max(0, totalSteps - 1));
+  const currentField = visibleFields[clampedStep] ?? null;
+  const isLastStep   = clampedStep === totalSteps - 1;
+  const progress     = useMemo(() => {
+    if (!visibleFields.length) return 100;
+    return Math.round((clampedStep / visibleFields.length) * 100);
+  }, [visibleFields.length, clampedStep]);
+
+  /* Clamp currentStep in the store when conditional logic shrinks visible fields */
+  useEffect(() => {
+    if (currentStep !== clampedStep) {
+      setCurrentStep(clampedStep);
+    }
+  }, [currentStep, clampedStep, setCurrentStep]);
 
   /* Submit mutation — always called (hooks can't be conditional) */
   const submitMutation = trpc.responses.submit.useMutation({
@@ -314,7 +328,7 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
         <div style={{ padding: '16px 24px 0' }}>
           <ProgressBar
             progress={progress}
-            label={`${currentStep + 1} of ${totalSteps}`}
+            label={`${clampedStep + 1} of ${totalSteps}`}
           />
         </div>
       )}
@@ -333,7 +347,7 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
               letterSpacing:'0.08em',
             }}
           >
-            {String(currentStep + 1).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
+            {String(clampedStep + 1).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
           </div>
 
           {/* Animated field */}
@@ -444,7 +458,7 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
           {/* Navigation */}
           <div className="flex items-center gap-3" style={{ marginTop: '36px' }}>
             {/* Prev */}
-            {currentStep > 0 && (
+            {clampedStep > 0 && (
               <button
                 onClick={handlePrev}
                 className="flex items-center gap-1.5"

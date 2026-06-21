@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import { trpc } from '~/trpc/client';
 import {
   FormHealthScore,
@@ -19,7 +19,6 @@ import {
 import Link from 'next/link';
 import QRCodeModal from '~/components/shared/QRCodeModal';
 import LoadingScreen from '~/components/shared/LoadingScreen';
-import { AnimatePresence } from 'framer-motion';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
 /* ── Loading skeleton ─────────────────────────────────────────────── */
@@ -98,6 +97,7 @@ export default function FormOverviewPage({
   const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [copied,  setCopied]  = useState(false);
   const [qrOpen,  setQrOpen]  = useState(false);
+  const [origin,  setOrigin]  = useState('');
 
   /* ── tRPC queries ────────────────────────────────────────────── */
   const formQuery = trpc.forms.byId.useQuery({ id: formId });
@@ -111,6 +111,10 @@ export default function FormOverviewPage({
 
   const showLoading = useDelayedLoading(formQuery.isLoading);
 
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
   /* ── 4-state pattern on primary data ────────────────────────── */
   if (formQuery.error) {
     return (
@@ -123,6 +127,15 @@ export default function FormOverviewPage({
         }}
       >
         [ERROR] {formQuery.error.message}
+      </div>
+    );
+  }
+
+  if (formQuery.isLoading) {
+    if (!showLoading) return null;
+    return (
+      <div style={{ padding: '32px' }}>
+        <LoadingScreen variant="inline" message="Loading analytics..." />
       </div>
     );
   }
@@ -149,9 +162,7 @@ export default function FormOverviewPage({
   const anyAnalyticsError = statsQuery.error ?? healthQuery.error ?? insightsQuery.error ??
     completionQuery.error ?? dropoffQuery.error ?? timeSeriesQuery.error;
 
-  const publicUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/f/${form.slug}`
-    : `/f/${form.slug}`;
+  const publicUrl = origin ? `${origin}/f/${form.slug}` : `/f/${form.slug}`;
 
   function copyLink() {
     void navigator.clipboard.writeText(publicUrl);
@@ -161,13 +172,7 @@ export default function FormOverviewPage({
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <AnimatePresence mode="wait">
-      {showLoading ? (
-        <div key="loading" style={{ padding: '32px' }}>
-          <LoadingScreen variant="inline" message="Loading analytics..." />
-        </div>
-      ) : (
-        <>
+    <>
         <div
           style={{
             padding:    '24px',
@@ -422,8 +427,6 @@ export default function FormOverviewPage({
           url={publicUrl}
           formTitle={form.title}
         />
-        </>
-      )}
-    </AnimatePresence>
+    </>
   );
 }

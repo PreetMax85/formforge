@@ -5,7 +5,6 @@ import type { CSSProperties, ReactNode } from 'react';
 import { trpc } from '~/trpc/client';
 import { FORM_THEMES, THEME_META } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 import { toast } from 'sonner';
@@ -255,17 +254,33 @@ export default function FormSettingsPage({
     );
   }
 
-  if (!form) return null;
+  if (formQuery.isLoading) {
+    if (!showLoading) return null;
+    return (
+      <div style={{ padding: '24px' }}>
+        <LoadingScreen variant="inline" message="Loading settings..." />
+      </div>
+    );
+  }
+
+  if (!form) {
+    return (
+      <div
+        style={{
+          padding:    '24px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize:   '12px',
+          color:      '#4b5563',
+        }}
+      >
+        Form not found in scene.
+      </div>
+    );
+  }
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <AnimatePresence mode="wait">
-      {showLoading ? (
-        <div key="loading" style={{ padding: '24px' }}>
-          <LoadingScreen variant="inline" message="Loading settings..." />
-        </div>
-      ) : (
-        <div key="content" style={{ padding: '24px', maxWidth: '800px' }}>
+    <div style={{ padding: '24px', maxWidth: '800px' }}>
 
       {/* ── Basic info ───────────────────────────────────────────── */}
       <Section title="Basic Info">
@@ -522,8 +537,6 @@ export default function FormSettingsPage({
           {updateMutation.isPending ? 'SAVING...' : 'SAVE SETTINGS'}
         </button>
       </div>
-        </div>
-      )}
-    </AnimatePresence>
+    </div>
   );
 }

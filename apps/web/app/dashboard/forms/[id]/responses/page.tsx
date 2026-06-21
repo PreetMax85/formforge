@@ -7,7 +7,6 @@ import {
   Inbox, ChevronDown, ChevronUp, Trash2,
   Mail, User, Clock, Download,
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
@@ -545,6 +544,15 @@ export default function ResponsesPage({
     );
   }
 
+  if (isLoading) {
+    if (!showLoading) return null;
+    return (
+      <div style={{ padding: '24px' }}>
+        <LoadingScreen variant="inline" message="Fetching responses..." />
+      </div>
+    );
+  }
+
   if (allResponses.length === 0) {
     return (
       <div
@@ -577,14 +585,8 @@ export default function ResponsesPage({
 
   /* ── Render ──────────────────────────────────────────────────── */
   return (
-    <AnimatePresence mode="wait">
-      {showLoading ? (
-        <div key="loading" style={{ padding: '24px' }}>
-          <LoadingScreen variant="inline" message="Fetching responses..." />
-        </div>
-      ) : (
-        <>
-          <div style={{ padding: '24px' }}>
+    <>
+      <div style={{ padding: '24px' }}>
 
         {/* ── Toolbar ────────────────────────────────────────────── */}
         <div
@@ -681,8 +683,6 @@ export default function ResponsesPage({
           onCancel={() => setPendingDeleteId(null)}
         />
       )}
-        </>
-      )}
-    </AnimatePresence>
+    </>
   );
 }
