@@ -6,7 +6,7 @@ import type { Field } from '~/lib/types/field';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 interface PublicFormPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 /**
