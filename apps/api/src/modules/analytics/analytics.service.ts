@@ -1,8 +1,8 @@
-import { eq, sql, count, and, gte, lt } from 'drizzle-orm';
+import { eq, sql, count, and, gte, lt, inArray } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { logger } from '../../common/logger';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
-import type { DropoffRow, FunnelStage, FormInsight, FormStats, FormAnalyticsStats } from '@repo/shared';
+import type { DropoffRow, FunnelStage, FormInsight, FormStats, FormAnalyticsStats, OptionBreakdown } from '@repo/shared';
 
 // Analytics Aggregation Pipeline:
 // Raw responses → field-level aggregation → health scoring →
@@ -420,4 +420,91 @@ export async function getTimeSeries(opts: {
     logger.error({ err, formId, granularity }, '[analytics] getTimeSeries SQL failed');
     return [];
   }
+}
+
+/**
+ * Per-option response counts for select / multi-select / dropdown /
+ * checkbox / rating fields. Returns one OptionBreakdown per eligible
+ * field, with each configured option (or "Other" for free-form answers
+ * not in the option set) and its count.
+ *
+ * For checkbox fields, counts "true" vs "false" responses.
+ * For rating fields, counts 1..max (default 5) responses.
+ * For multi_select, each answer is an array — every selected option
+ * is counted once per respondent who picked it.
+ */
+export async function getFieldOptionBreakdowns(formId: string): Promise<OptionBreakdown[]> {
+  const eligibleTypes = [
+    'single_select', 'multi_select', 'dropdown', 'checkbox', 'rating',
+  ] as const;
+
+  const formFields = await db
+    .select({
+      id:     fields.id,
+      label:  fields.label,
+      type:   fields.type,
+      config: fields.config,
+    })
+    .from(fields)
+    .where(and(eq(fields.formId, formId), inArray(fields.type, [...eligibleTypes])))
+    .orderBy(fields.order);
+
+  if (formFields.length === 0) return [];
+
+  const fieldIds = formFields.map((f) => f.id);
+
+  const answerRows = await db
+    .select({ fieldId: responseAnswers.fieldId, value: responseAnswers.value })
+    .from(responseAnswers)
+    .where(inArray(responseAnswers.fieldId, fieldIds));
+
+  const countsByField = new Map<string, Map<string, number>>();
+  for (const row of answerRows) {
+    let perField = countsByField.get(row.fieldId);
+    if (!perField) {
+      perField = new Map();
+      countsByField.set(row.fieldId, perField);
+    }
+
+    const raw = row.value;
+    if (Array.isArray(raw)) {
+      for (const v of raw) {
+        const key = String(v);
+        perField.set(key, (perField.get(key) ?? 0) + 1);
+      }
+    } else {
+      const key = String(raw);
+      perField.set(key, (perField.get(key) ?? 0) + 1);
+    }
+  }
+
+  return formFields.map((f) => {
+    const config = (f.config ?? {}) as Record<string, unknown>;
+    const perField = countsByField.get(f.id) ?? new Map<string, number>();
+
+    let definedOptions: string[] = [];
+    if (f.type === 'checkbox') {
+      definedOptions = ['true', 'false'];
+    } else if (f.type === 'rating') {
+      const max = typeof config.max === 'number' ? config.max : 5;
+      definedOptions = Array.from({ length: max }, (_, i) => String(i + 1));
+    } else if (Array.isArray(config.options)) {
+      definedOptions = (config.options as unknown[]).map((o) => String(o));
+    }
+
+    const seenKeys = new Set(perField.keys());
+    const otherKeys = [...seenKeys].filter((k) => !definedOptions.includes(k));
+
+    const options = [
+      ...definedOptions.map((value) => ({ value, count: perField.get(value) ?? 0 })),
+      ...otherKeys.map((value) => ({ value, count: perField.get(value) ?? 0 })),
+    ].filter((o) => o.count > 0 || definedOptions.includes(o.value));
+
+    return {
+      fieldId:    f.id,
+      fieldLabel: f.label,
+      fieldType:  f.type,
+      options,
+    };
+  });
 }

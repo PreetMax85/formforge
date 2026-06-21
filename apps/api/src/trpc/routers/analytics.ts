@@ -4,6 +4,7 @@ import { TimeSeriesSchema } from '@repo/shared';
 import {
   getFormStats,
   getTimeSeries,
+  getFieldOptionBreakdowns,
   computeFormHealthScore,
   calculateQ1toQnDropoff,
   computeResponseCompletionFunnel,
@@ -71,5 +72,14 @@ export const analyticsRouter = router({
       const stats    = await getFormStats(input.formId);
       const insights = generateFormInsightsSummary(stats);
       return { success: true as const, message: 'OK', data: insights };
+    }),
+
+  /* ── fieldBreakdown ─────────────────────────────────────────── */
+  fieldBreakdown: protectedProcedure
+    .input(z.object({ formId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      await assertFormOwner(input.formId, ctx.user.sub);
+      const breakdown = await getFieldOptionBreakdowns(input.formId);
+      return { success: true as const, message: 'OK', data: breakdown };
     }),
 });

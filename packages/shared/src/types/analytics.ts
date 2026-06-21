@@ -32,3 +32,15 @@ export interface FormStats {
 export interface FormAnalyticsStats extends FormStats {
   totalResponses: number;
 }
+
+/**
+ * Per-option breakdown for a single select / multi-select / dropdown /
+ * checkbox / rating field. Each entry is one option value + how many
+ * respondents picked it.
+ */
+export interface OptionBreakdown {
+  fieldId:    string;
+  fieldLabel: string;
+  fieldType:  string;
+  options:    { value: string; count: number }[];
+}

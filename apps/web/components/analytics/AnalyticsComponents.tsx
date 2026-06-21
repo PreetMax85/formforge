@@ -3,9 +3,10 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
+  PieChart, Pie, Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Zap, AlertCircle, Activity, Info } from 'lucide-react';
-import type { DropoffRow, FunnelStage, FormInsight } from '@repo/shared';
+import { TrendingUp, TrendingDown, Zap, AlertCircle, Activity, Info, PieChart as PieIcon } from 'lucide-react';
+import type { DropoffRow, FunnelStage, FormInsight, OptionBreakdown } from '@repo/shared';
 
 /* ── Shared panel wrapper ─────────────────────────────────────────── */
 function Panel({
@@ -445,6 +446,162 @@ export function FieldBreakdown({ data }: FieldBreakdownProps) {
           </BarChart>
         </ResponsiveContainer>
       )}
+    </Panel>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   OPTION BREAKDOWN (per select / checkbox / rating field)
+════════════════════════════════════════════════════════════════ */
+
+const OPTION_PIE_COLORS = [
+  '#569cd6', '#4ec9b0', '#ce9178', '#dcdcaa', '#c586c0',
+  '#4caf50', '#ff9800', '#9ca3af', '#f87171', '#60a5fa',
+];
+
+/**
+ * Formats an option value for display: humanizes "true"/"false" for
+ * checkbox fields, trims long values, and labels unknown options.
+ */
+function formatOptionLabel(value: string, fieldType: string): string {
+  if (fieldType === 'checkbox') {
+    if (value === 'true') return 'Yes';
+    if (value === 'false') return 'No';
+  }
+  if (value.length > 24) return value.slice(0, 22) + '…';
+  return value;
+}
+
+interface OptionBreakdownChartProps {
+  data: OptionBreakdown[];
+}
+
+/**
+ * Per-option pie charts for select / multi-select / checkbox / rating
+ * fields. Renders one donut chart per eligible field showing the
+ * distribution of answers across configured options.
+ */
+export function OptionBreakdownChart({ data }: OptionBreakdownChartProps) {
+  if (data.length === 0) {
+    return (
+      <Panel title="Option Breakdown" icon={PieIcon}>
+        <ChartEmpty message="No select / checkbox / rating fields on this form." />
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="Option Breakdown" icon={PieIcon}>
+      <div className="flex flex-col gap-6">
+        {data.map((field) => {
+          const total = field.options.reduce((sum, o) => sum + o.count, 0);
+          const chartData = field.options.map((o) => ({
+            name:  formatOptionLabel(o.value, field.fieldType),
+            value: o.count,
+          }));
+
+          return (
+            <div key={field.fieldId}>
+              <div
+                className="flex items-center justify-between"
+                style={{ marginBottom: '10px' }}
+              >
+                <span
+                  style={{
+                    fontFamily:   "'Inter', sans-serif",
+                    fontSize:     '13px',
+                    fontWeight:   500,
+                    color:        '#d4d4d4',
+                  }}
+                >
+                  {field.fieldLabel}
+                </span>
+                <span
+                  style={{
+                    fontFamily:    "'JetBrains Mono', monospace",
+                    fontSize:      '10px',
+                    color:         '#6b7280',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {field.fieldType.replace('_', ' ')}
+                  {total > 0 ? ` · ${total} answers` : ''}
+                </span>
+              </div>
+
+              {total === 0 ? (
+                <ChartEmpty message="No answers for this field yet." />
+              ) : (
+                <div className="flex items-center gap-6" style={{ flexWrap: 'wrap' }}>
+                  <ResponsiveContainer width={220} height={220}>
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={55}
+                        outerRadius={95}
+                        paddingAngle={2}
+                        stroke="#0e0e0e"
+                        strokeWidth={2}
+                      >
+                        {chartData.map((_, i) => (
+                          <Cell key={i} fill={OPTION_PIE_COLORS[i % OPTION_PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<DarkTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Legend with counts */}
+                  <div className="flex flex-col gap-1.5" style={{ flex: 1, minWidth: '180px' }}>
+                    {chartData.map((opt, i) => {
+                      const pct = total > 0 ? Math.round((opt.value / total) * 100) : 0;
+                      return (
+                        <div key={opt.name} className="flex items-center gap-2">
+                          <span
+                            style={{
+                              display:    'inline-block',
+                              width:       '10px',
+                              height:      '10px',
+                              background:  OPTION_PIE_COLORS[i % OPTION_PIE_COLORS.length],
+                              flexShrink:  0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize:   '12px',
+                              color:      '#9ca3af',
+                              flex:       1,
+                              overflow:   'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {opt.name}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize:   '11px',
+                              color:      '#6b7280',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {opt.value} · {pct}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </Panel>
   );
 }

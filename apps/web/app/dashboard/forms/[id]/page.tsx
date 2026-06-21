@@ -11,6 +11,7 @@ import {
   TimeSeries,
   InsightCards,
   FieldBreakdown,
+  OptionBreakdownChart,
 } from '~/components/analytics/AnalyticsComponents';
 import {
   BarChart2, ExternalLink, Copy, CheckCircle,
@@ -108,6 +109,7 @@ export default function FormOverviewPage({
   const completionQuery   = trpc.analytics.completionFunnel.useQuery({ formId });
   const timeSeriesQuery   = trpc.analytics.timeSeries.useQuery({ formId, granularity });
   const insightsQuery     = trpc.analytics.insights.useQuery({ formId });
+  const breakdownQuery    = trpc.analytics.fieldBreakdown.useQuery({ formId });
 
   const showLoading = useDelayedLoading(formQuery.isLoading);
 
@@ -418,6 +420,13 @@ export default function FormOverviewPage({
         <Skeleton h={240} />
       ) : (
         <FieldBreakdown data={dropoffQuery.data?.data ?? []} />
+      )}
+
+      {/* Option breakdown — per select / checkbox / rating field */}
+      {breakdownQuery.isLoading ? (
+        <Skeleton h={320} />
+      ) : (
+        <OptionBreakdownChart data={breakdownQuery.data?.data ?? []} />
       )}
         </div>
 
