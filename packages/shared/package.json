@@ -9,7 +9,7 @@
     "./types": "./src/types/index.ts",
     "./errors": "./src/errors/ApiError.ts",
     "./constants": "./src/constants/index.ts",
-    "./utils": "./src/utils/conditionalLogic.ts"
+    "./utils": "./src/utils/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

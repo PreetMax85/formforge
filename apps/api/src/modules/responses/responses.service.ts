@@ -2,11 +2,14 @@ import { createHash } from 'crypto';
 import { sql, eq, and, desc, lt, inArray, type SQL } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
-import { ApiError, resolveVisibleFieldGraph } from '@repo/shared';
+import { ApiError, resolveVisibleFieldGraph, validateResponseAnswers } from '@repo/shared';
 import { logger } from '../../common/logger';
 import { env } from '../../common/config/env';
 import { detectSpamSubmissionCluster } from '../analytics/analytics.service';
 import { sendResponseReceived, sendResponseCopy } from '@repo/email';
+
+// Re-export for backward compatibility — tests import from this module
+export { validateResponseAnswers } from '@repo/shared';
 
 interface SubmitResponseInput {
   formSlug:        string;
@@ -18,42 +21,6 @@ interface SubmitResponseInput {
   userAgent?:       string;
   turnstileToken?:  string;
   _hp?:             string;
-}
-
-/**
- * Validates response answers against form fields server-side.
- * Checks type, required, and basic format constraints.
- */
-export function validateResponseAnswers(
-  formFields: { id: string; type: string; required: boolean; config: Record<string, unknown>; label: string }[],
-  answers: { fieldId: string; value: string | string[] }[],
-): { success: boolean; error?: string } {
-  const answerMap = new Map(answers.map(a => [a.fieldId, a.value]));
-
-  for (const field of formFields) {
-    const value = answerMap.get(field.id);
-
-    if (field.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))) {
-      return { success: false, error: `"${field.label}" is required` };
-    }
-
-    if (value === undefined) continue;
-
-    if (field.type === 'email' && typeof value === 'string') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) {
-        return { success: false, error: `"${field.label}" must be a valid email` };
-      }
-    }
-
-    if (field.type === 'number' && typeof value === 'string') {
-      if (isNaN(Number(value))) {
-        return { success: false, error: `"${field.label}" must be a number` };
-      }
-    }
-  }
-
-  return { success: true };
 }
 
 export async function submitResponse(input: SubmitResponseInput) {
