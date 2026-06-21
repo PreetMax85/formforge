@@ -121,7 +121,7 @@ const publicFormDetailSchema = formObjectSchema.omit({ passwordHash: true }).ext
 
 const formsRouter = router({
   bySlug: publicProcedure
-    .meta({ openapi: { method: 'GET', path: '/forms/{slug}' } })
+    .meta({ openapi: { method: 'GET', path: '/forms/{slug}', tags: ['Forms'], description: 'Fetch a published form by slug (public, no auth).' } })
     .input(z.object({ slug: z.string() }))
     .output(successEnvelope(publicFormDetailSchema))
     .query(async ({ input }) => {
@@ -131,7 +131,7 @@ const formsRouter = router({
     }),
 
   incrementView: publicProcedure
-    .meta({ openapi: { method: 'POST', path: '/forms/{slug}/view' } })
+    .meta({ openapi: { method: 'POST', path: '/forms/{slug}/view', tags: ['Forms'], description: 'Increment the view counter for a published form (called on public page load).' } })
     .input(z.object({ slug: z.string() }))
     .output(successEnvelope(z.null()))
     .mutation(async ({ input }) => {
@@ -142,7 +142,7 @@ const formsRouter = router({
     }),
 
   explore: publicProcedure
-    .meta({ openapi: { method: 'GET', path: '/forms/explore' } })
+    .meta({ openapi: { method: 'GET', path: '/forms/explore', tags: ['Forms'], description: 'Paginated list of public published forms with optional search and theme filter.' } })
     .input(ExploreSchema)
     .output(successEnvelope(exploreOutputSchema))
     .query(async ({ input }) => {
@@ -151,6 +151,7 @@ const formsRouter = router({
     }),
 
   create: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/forms', tags: ['Forms'], description: 'Create a new draft form. Auto-generates a unique slug if none provided.' } })
     .input(CreateFormSchema)
     .mutation(async ({ input, ctx }) => {
       const form = await createForm(input, ctx.user.sub);
@@ -158,6 +159,7 @@ const formsRouter = router({
     }),
 
   update: protectedProcedure
+    .meta({ openapi: { method: 'PUT', path: '/forms/{id}', tags: ['Forms'], description: 'Update form settings (title, slug, theme, visibility, limits, etc.).' } })
     .input(UpdateFormSchema)
     .mutation(async ({ input, ctx }) => {
       const { id, ...rest } = input;
@@ -166,6 +168,7 @@ const formsRouter = router({
     }),
 
   delete: protectedProcedure
+    .meta({ openapi: { method: 'DELETE', path: '/forms/{id}', tags: ['Forms'], description: 'Permanently delete a form and all its fields and responses.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       await deleteForm(input.id, ctx.user.sub);
@@ -173,6 +176,7 @@ const formsRouter = router({
     }),
 
   publish: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/forms/{id}/publish', tags: ['Forms'], description: 'Publish a form with public or unlisted visibility.' } })
     .input(PublishFormSchema)
     .mutation(async ({ input, ctx }) => {
       const form = await publishForm(input.id, input.visibility, ctx.user.sub);
@@ -180,6 +184,7 @@ const formsRouter = router({
     }),
 
   unpublish: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/forms/{id}/unpublish', tags: ['Forms'], description: 'Revert a published form back to draft status.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       const form = await unpublishForm(input.id, ctx.user.sub);
@@ -187,6 +192,7 @@ const formsRouter = router({
     }),
 
   clone: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/forms/{id}/clone', tags: ['Forms'], description: 'Deep-clone a form into a new draft. Copies all fields and conditional-logic rules with remapped IDs.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       const cloned = await cloneForm(input.id, ctx.user.sub);
@@ -194,6 +200,7 @@ const formsRouter = router({
     }),
 
   archive: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/forms/{id}/archive', tags: ['Forms'], description: 'Archive a form (stops accepting responses but preserves data).' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       const form = await archiveForm(input.id, ctx.user.sub);
@@ -201,12 +208,14 @@ const formsRouter = router({
     }),
 
   myForms: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/forms/mine', tags: ['Forms'], description: 'List all forms owned by the authenticated user.' } })
     .query(async ({ ctx }) => {
       const items = await getFormsByCreator(ctx.user.sub);
       return { success: true as const, message: 'Forms found', data: { items } };
     }),
 
   byId: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/forms/by-id/{id}', tags: ['Forms'], description: 'Fetch a form by ID (authenticated, owner-only). Includes all fields.' } })
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       const form = await getFormById(input.id, ctx.user.sub);
@@ -214,6 +223,7 @@ const formsRouter = router({
     }),
 
   exportCsv: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/forms/{id}/export', tags: ['Forms'], description: 'Export all responses for a form as CSV (not yet implemented).' } })
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await getFormById(input.id, ctx.user.sub);

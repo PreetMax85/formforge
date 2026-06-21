@@ -15,6 +15,7 @@ import { assertFormOwner } from '../utils/ownership';
 export const analyticsRouter = router({
   /* ── formStats ─────────────────────────────────────────────── */
   formStats: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/stats', tags: ['Analytics'], description: 'Aggregate form statistics: completion rate, response velocity, drop-off, engagement.' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -24,6 +25,7 @@ export const analyticsRouter = router({
 
   /* ── healthScore ────────────────────────────────────────────── */
   healthScore: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/health', tags: ['Analytics'], description: '0-100 weighted health score (completion 40% + velocity 30% + drop-off 20% + engagement 10%).' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -34,6 +36,7 @@ export const analyticsRouter = router({
 
   /* ── dropoffFunnel ──────────────────────────────────────────── */
   dropoffFunnel: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/dropoff', tags: ['Analytics'], description: 'Q1→Qn field-level retention percentages using Postgres CTEs and window functions.' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -43,6 +46,7 @@ export const analyticsRouter = router({
 
   /* ── completionFunnel ───────────────────────────────────────── */
   completionFunnel: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/completion', tags: ['Analytics'], description: '4-stage funnel: Viewed → Started → Halfway → Submitted with conversion rates.' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -52,6 +56,7 @@ export const analyticsRouter = router({
 
   /* ── timeSeries ─────────────────────────────────────────────── */
   timeSeries: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/timeseries', tags: ['Analytics'], description: 'Response counts over time, bucketed by day / week / month.' } })
     .input(TimeSeriesSchema)
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -66,6 +71,7 @@ export const analyticsRouter = router({
 
   /* ── insights ───────────────────────────────────────────────── */
   insights: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/insights', tags: ['Analytics'], description: 'Rule-based insight cards: velocity trends, drop-off warnings, health summary.' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -76,6 +82,7 @@ export const analyticsRouter = router({
 
   /* ── fieldBreakdown ─────────────────────────────────────────── */
   fieldBreakdown: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/analytics/{formId}/breakdown', tags: ['Analytics'], description: 'Per-option answer distribution for select / multi-select / checkbox / rating fields.' } })
     .input(z.object({ formId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);

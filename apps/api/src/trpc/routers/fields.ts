@@ -11,6 +11,7 @@ import { assertFormOwner } from '../utils/ownership';
 
 const fieldsRouter = router({
   upsertMany: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/fields/upsert', tags: ['Fields'], description: 'Bulk upsert fields for a form (insert new, update existing by ID).' } })
     .input(UpsertFieldsSchema)
     .mutation(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -19,6 +20,7 @@ const fieldsRouter = router({
     }),
 
   reorder: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/fields/reorder', tags: ['Fields'], description: 'Reorder fields by providing an array of { id, order } pairs.' } })
     .input(ReorderFieldsSchema)
     .mutation(async ({ input, ctx }) => {
       await assertFormOwner(input.formId, ctx.user.sub);
@@ -27,6 +29,7 @@ const fieldsRouter = router({
     }),
 
   delete: protectedProcedure
+    .meta({ openapi: { method: 'DELETE', path: '/fields/{id}', tags: ['Fields'], description: 'Delete a single field by ID.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       await verifyFieldOwnership(input.id, ctx.user.sub);

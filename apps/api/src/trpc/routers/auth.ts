@@ -46,6 +46,7 @@ function clearRefreshCookie(res: Response) {
 
 const authRouter = router({
   signup: publicProcedure
+    .meta({ openapi: { method: 'POST', path: '/auth/signup', tags: ['Auth'], description: 'Create a new account and receive access + refresh tokens.' } })
     .input(SignupSchema)
     .mutation(async ({ input, ctx }) => {
       const user = await createUser(input.email, input.name, input.password);
@@ -64,6 +65,7 @@ const authRouter = router({
     }),
 
   login: publicProcedure
+    .meta({ openapi: { method: 'POST', path: '/auth/login', tags: ['Auth'], description: 'Log in with email + password and receive access + refresh tokens.' } })
     .input(LoginSchema)
     .mutation(async ({ input, ctx }) => {
       const user = await loginUser(input.email, input.password);
@@ -82,6 +84,7 @@ const authRouter = router({
     }),
 
   logout: protectedProcedure
+    .meta({ openapi: { method: 'POST', path: '/auth/logout', tags: ['Auth'], description: 'Revoke the current session and clear the refresh cookie.' } })
     .mutation(async ({ ctx }) => {
       const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
       if (refreshToken) {
@@ -103,6 +106,7 @@ const authRouter = router({
     }),
 
   refresh: publicProcedure
+    .meta({ openapi: { method: 'POST', path: '/auth/refresh', tags: ['Auth'], description: 'Exchange a valid refresh token (HttpOnly cookie) for a new access token. Rotates the refresh token.' } })
     .mutation(async ({ ctx }) => {
       const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
       if (!refreshToken) {
@@ -145,6 +149,7 @@ const authRouter = router({
     }),
 
   me: protectedProcedure
+    .meta({ openapi: { method: 'GET', path: '/auth/me', tags: ['Auth'], description: 'Return the currently authenticated user from the access token.' } })
     .query(async ({ ctx }) => {
       return {
         success: true as const,
@@ -154,6 +159,7 @@ const authRouter = router({
     }),
 
   validate: publicProcedure
+    .meta({ openapi: { method: 'GET', path: '/auth/validate', tags: ['Auth'], description: 'Validate a refresh token (from HttpOnly cookie) and return the user identity.' } })
     .query(async ({ ctx }) => {
       const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
       if (!refreshToken) {
