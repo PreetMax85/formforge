@@ -4,18 +4,9 @@
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp"
-    },
-    "sentry": {
-      "type": "remote",
-      "url": "https://mcp.sentry.dev/mcp",
-      "oauth": {}
     }
   },
-  "plugin": [
-    "opencode-sentry-monitor",
-    "opencode-dynamic-context-pruning",
-    "opencode-vibeguard"
-  ],
+  "plugin": ["opencode-sentry-monitor", "opencode-dynamic-context-pruning", "opencode-vibeguard"],
   "lsp": true,
   "formatter": true
 }
