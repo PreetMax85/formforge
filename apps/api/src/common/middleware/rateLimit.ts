@@ -2,6 +2,8 @@ import rateLimit from 'express-rate-limit';
 
 // Tiered rate limiting strategy with cascading defense:
 // globalLimiter → apiWriteLimiter → submissionLimiter
+// viewLimiter is a separate, more lenient limiter for view-count
+// increments so analytics aren't skewed by the strict submission cap.
 
 export const globalLimiter = rateLimit({
   windowMs:        15 * 60 * 1000,
@@ -25,6 +27,14 @@ export const submissionLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders:   false,
   message:         { success: false, error: 'Too many submissions. Please try again later.' },
+});
+
+export const viewLimiter = rateLimit({
+  windowMs:        15 * 60 * 1000,
+  max:             60,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { success: false, error: 'Too many requests. Please try again later.' },
 });
 
 export const passwordResetLimiter = rateLimit({

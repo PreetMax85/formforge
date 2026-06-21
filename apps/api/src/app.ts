@@ -19,6 +19,7 @@ import {
   apiWriteLimiter,
   passwordResetLimiter,
   submissionLimiter,
+  viewLimiter,
 } from './common/middleware/rateLimit';
 import { optionalAuth } from './common/middleware/optionalAuth';
 import { asyncHandler } from './common/utils/asyncHandler';
@@ -66,20 +67,25 @@ export function createApp(): express.Application {
 
   app.use('/api/auth/login',           apiWriteLimiter);
   app.use('/api/auth/signup',          apiWriteLimiter);
+  app.use('/api/auth/refresh',         apiWriteLimiter);
   app.use('/api/auth/forgot-password', passwordResetLimiter);
   app.use('/api/auth/reset-password',  passwordResetLimiter);
 
   // tRPC auth endpoints also need write-rate limits
-  app.use('/trpc/auth.login',  apiWriteLimiter);
-  app.use('/trpc/auth.signup', apiWriteLimiter);
+  app.use('/trpc/auth.login',   apiWriteLimiter);
+  app.use('/trpc/auth.signup',  apiWriteLimiter);
+  app.use('/trpc/auth.refresh', apiWriteLimiter);
 
   // Public form submission endpoints — stricter limiter on top of globalLimiter
   app.use('/api/v1/responses/submit', submissionLimiter);
   app.use('/trpc/responses.submit',    submissionLimiter);
 
-  // View count increment — rate-limited to prevent abuse
-  app.use('/api/v1/forms/:formSlug/view', submissionLimiter);
-  app.use('/trpc/forms.incrementView', submissionLimiter);
+  // View count increment — lenient limiter so analytics aren't skewed.
+  // submissionLimiter (5/15min) was too strict and caused viewCount to
+  // drastically undercount, corrupting the health score (40% weighted
+  // on completion rate = responses/views).
+  app.use('/api/v1/forms/:formSlug/view', viewLimiter);
+  app.use('/trpc/forms.incrementView',     viewLimiter);
 
   app.use(optionalAuth);
 
