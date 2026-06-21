@@ -38,5 +38,5 @@ export const ExploreSchema = z.object({
   search: z.string().max(100).optional(),
   theme:  z.enum(FORM_THEMES).optional(),
   limit:  z.number().min(1).max(50).default(20),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().optional(),
 });

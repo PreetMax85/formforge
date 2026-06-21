@@ -112,7 +112,7 @@ const publicFormOutputSchema = safeFormOutputSchema.extend({
 
 const exploreResultSchema = z.object({
   items: z.array(formObjectSchema),
-  nextCursor: z.string().uuid().nullable(),
+  nextCursor: z.string().nullable(),
 });
 
 const publicFormDetailSchema = formObjectSchema.omit({ passwordHash: true }).extend({

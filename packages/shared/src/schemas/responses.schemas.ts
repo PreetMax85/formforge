@@ -6,17 +6,18 @@ export const AnswerSchema = z.object({
 });
 
 export const SubmitResponseSchema = z.object({
-  formSlug:        z.string(),
+  formSlug:        z.string().min(1).max(100),
   answers:         z.array(AnswerSchema).min(1).max(50),
   respondentEmail: z.string().email().optional(),
   respondentName:  z.string().max(255).optional(),
   sendEmailCopy:   z.boolean().default(false),
   turnstileToken:  z.string().optional(),
+  password:        z.string().max(200).optional(),
   _hp:             z.string().optional(),
 });
 
 export const ListResponsesSchema = z.object({
   formId: z.string().uuid(),
   limit:  z.number().min(1).max(100).default(50),
-  cursor: z.string().uuid().optional(),
+  cursor: z.string().optional(),
 });

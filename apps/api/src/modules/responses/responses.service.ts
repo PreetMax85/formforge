@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
-import { sql, eq, and, desc, lt, inArray, type SQL } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
+import { sql, eq, and, desc, lt, inArray, isNull, or, type SQL } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
 import { ApiError, resolveVisibleFieldGraph, validateResponseAnswers } from '@repo/shared';
@@ -20,6 +21,7 @@ interface SubmitResponseInput {
   ipAddress?:       string;
   userAgent?:       string;
   turnstileToken?:  string;
+  password?:        string;
   _hp?:             string;
 }
 
@@ -50,7 +52,17 @@ export async function submitResponse(input: SubmitResponseInput) {
   if (!form) throw ApiError.notFound('Form not found');
   if (form.status !== 'published') throw ApiError.forbidden('Form is not accepting responses');
   if (form.expiresAt && form.expiresAt < new Date()) throw ApiError.forbidden('This form has closed');
-  if (form.maxResponses && form.responseCount >= form.maxResponses) throw ApiError.forbidden('This form is no longer accepting responses');
+
+  // Enforce form-level access settings
+  if (form.requireEmail && !input.respondentEmail) {
+    throw ApiError.badRequest('Email is required for this form');
+  }
+  if (!form.allowAnonymous && !input.respondentEmail && !input.respondentName) {
+    throw ApiError.badRequest('This form does not accept anonymous responses');
+  }
+  if (form.passwordHash && !(await bcrypt.compare(input.password ?? '', form.passwordHash))) {
+    throw ApiError.unauthorized('Incorrect form password');
+  }
 
   // Build answers map for conditional-logic resolution
   const answersMap: Record<string, string | string[]> = {};
@@ -84,7 +96,11 @@ export async function submitResponse(input: SubmitResponseInput) {
   }
 
   // Step 3: Cryptographic Session Token Verification (Turnstile)
-  if (env.TURNSTILE_ENABLED && env.TURNSTILE_SECRET_KEY) {
+  if (env.TURNSTILE_ENABLED) {
+    if (!env.TURNSTILE_SECRET_KEY) {
+      logger.error('[TURNSTILE] Enabled but secret key not configured — failing closed');
+      throw ApiError.internal('CAPTCHA verification is misconfigured');
+    }
     const valid = await verifyTurnstileToken(input.turnstileToken);
     if (!valid) throw ApiError.badRequest('CAPTCHA verification failed');
   }
@@ -97,13 +113,17 @@ export async function submitResponse(input: SubmitResponseInput) {
   }
 
   // Step 4: IP/UA Fingerprint — Distributed Mutex Lock
+  // Includes respondentEmail/Name to avoid false-positive duplicate rejection
+  // when multiple users share the same NAT IP (corporate WiFi, VPN, school).
   const submissionHash = createHash('sha256')
-    .update(`${input.ipAddress ?? ''}:${form.id}:${input.userAgent ?? ''}:${Math.floor(Date.now() / 30_000)}`)
+    .update(`${input.ipAddress ?? ''}:${form.id}:${input.userAgent ?? ''}:${input.respondentEmail ?? ''}:${input.respondentName ?? ''}:${Math.floor(Date.now() / 30_000)}`)
     .digest('hex');
 
   const submissionHashExpiresAt = new Date(Date.now() + 30_000);
 
   // Step 5: Transactional Relational Integrity Check
+  // maxResponses is enforced atomically inside the transaction via a
+  // conditional UPDATE to prevent TOCTOU races between concurrent submissions.
   const result = await db.transaction(async (tx) => {
     const [response] = await tx
       .insert(responses)
@@ -115,11 +135,31 @@ export async function submitResponse(input: SubmitResponseInput) {
         userAgent:               input.userAgent,
         submissionHash,
         submissionHashExpiresAt,
+        emailCopySent:           input.sendEmailCopy && !!input.respondentEmail,
       })
       .onConflictDoNothing({ target: responses.submissionHash })
       .returning();
 
-    if (!response) return { duplicate: true, response: null };
+    if (!response) return { duplicate: true, response: null, capReached: false };
+
+    // Conditional atomic increment — only increments if under maxResponses cap.
+    // This is race-safe: the WHERE clause is evaluated at UPDATE time.
+    const [updated] = await tx
+      .update(forms)
+      .set({ responseCount: sql`${forms.responseCount} + 1` })
+      .where(
+        and(
+          eq(forms.id, form.id),
+          or(isNull(forms.maxResponses), lt(forms.responseCount, forms.maxResponses)),
+        ),
+      )
+      .returning({ responseCount: forms.responseCount });
+
+    if (!updated) {
+      // Cap reached — undo the response insert within the same transaction
+      await tx.delete(responses).where(eq(responses.id, response.id));
+      return { duplicate: false, response: null, capReached: true };
+    }
 
     if (input.answers.length > 0) {
       await tx.insert(responseAnswers).values(
@@ -131,13 +171,12 @@ export async function submitResponse(input: SubmitResponseInput) {
       );
     }
 
-    await tx
-      .update(forms)
-      .set({ responseCount: sql`${forms.responseCount} + 1` })
-      .where(eq(forms.id, form.id));
-
-    return { duplicate: false, response };
+    return { duplicate: false, response, capReached: false };
   });
+
+  if (result.capReached) {
+    throw ApiError.forbidden('This form is no longer accepting responses');
+  }
 
   if (result.duplicate) {
     return { success: true, message: 'Response already received.', duplicate: true };
@@ -185,18 +224,34 @@ export async function listResponses(
   if (form.creatorId !== requesterId) throw ApiError.forbidden('Not your form');
 
   const conditions: SQL<unknown>[] = [eq(responses.formId, formId)];
-  if (opts.cursor) conditions.push(lt(responses.id, opts.cursor));
+  if (opts.cursor) {
+    // Composite cursor: createdAt|id — ensures stable pagination with
+    // ORDER BY createdAt DESC, id DESC (no skipped/duplicate rows)
+    const sepIdx = opts.cursor.lastIndexOf('|');
+    if (sepIdx > 0) {
+      const cursorDate = opts.cursor.slice(0, sepIdx);
+      const cursorId   = opts.cursor.slice(sepIdx + 1);
+      const cursorCreatedAt = new Date(cursorDate);
+      conditions.push(
+        or(
+          lt(responses.createdAt, cursorCreatedAt),
+          and(eq(responses.createdAt, cursorCreatedAt), lt(responses.id, cursorId)),
+        )!,
+      );
+    }
+  }
 
   const rows = await db
     .select()
     .from(responses)
     .where(and(...conditions))
-    .orderBy(desc(responses.createdAt))
+    .orderBy(desc(responses.createdAt), desc(responses.id))
     .limit(opts.limit + 1);
 
   const hasMore = rows.length > opts.limit;
   const trimmed = hasMore ? rows.slice(0, opts.limit) : rows;
-  const nextCursor = hasMore ? trimmed[trimmed.length - 1]!.id : null;
+  const last = trimmed[trimmed.length - 1];
+  const nextCursor = hasMore && last ? `${last.createdAt.toISOString()}|${last.id}` : null;
 
   // Fetch answers for all returned responses
   const responseIds = trimmed.map(r => r.id);

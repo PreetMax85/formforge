@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../common/db/index';
 import { forms, fields } from '@repo/db/schema';
-import { eq, desc, sql, and, gt, lt, or, like, asc } from 'drizzle-orm';
+import { eq, desc, sql, and, lt, or, like, asc } from 'drizzle-orm';
 import { ApiError } from '@repo/shared';
 import type { z } from 'zod';
 import type { CreateFormSchema, UpdateFormSchema } from '@repo/shared';
-import { logger } from '../../common/logger'
+import { logger } from '../../common/logger';
 
 /**
  * Generates a URL-safe slug from a base title. Handles collisions by
@@ -242,18 +242,34 @@ export async function exploreForms(
     );
   }
   if (opts.theme) conditions.push(eq(forms.theme, opts.theme));
-  if (opts.cursor) conditions.push(lt(forms.id, opts.cursor));
+  if (opts.cursor) {
+    // Composite cursor: createdAt|id — ensures stable pagination with
+    // ORDER BY createdAt DESC, id DESC (no skipped/duplicate rows)
+    const sepIdx = opts.cursor.lastIndexOf('|');
+    if (sepIdx > 0) {
+      const cursorDate = opts.cursor.slice(0, sepIdx);
+      const cursorId   = opts.cursor.slice(sepIdx + 1);
+      const cursorCreatedAt = new Date(cursorDate);
+      conditions.push(
+        or(
+          lt(forms.createdAt, cursorCreatedAt),
+          and(eq(forms.createdAt, cursorCreatedAt), lt(forms.id, cursorId)),
+        )!,
+      );
+    }
+  }
 
   const items = await db
     .select()
     .from(forms)
     .where(and(...conditions))
-    .orderBy(desc(forms.createdAt))
+    .orderBy(desc(forms.createdAt), desc(forms.id))
     .limit(opts.limit + 1);
 
   const hasMore = items.length > opts.limit;
   const trimmed = hasMore ? items.slice(0, opts.limit) : items;
-  const nextCursor = hasMore ? trimmed[trimmed.length - 1]!.id : null;
+  const last = trimmed[trimmed.length - 1];
+  const nextCursor = hasMore && last ? `${last.createdAt.toISOString()}|${last.id}` : null;
 
   return { items: trimmed, nextCursor };
 }
