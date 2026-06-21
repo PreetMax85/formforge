@@ -15,8 +15,11 @@ const pool = new Pool({
   connectionTimeoutMillis: 10_000,
 });
 
-pool.on('error', (_err: Error) => {
-  // Attach an idle-client error listener so Neon pool events do not crash scripts.
+pool.on('error', (err: Error) => {
+  // Log to stderr — this package has no pino dependency. The API has its
+  // own Drizzle client at apps/api/src/common/db/index.ts with structured
+  // pino logging; this client is only used by the standalone seed script.
+  console.error('[DB] Neon serverless pool error:', err.message);
 });
 
 // Drizzle SQL query log is opt-in (DEBUG_SQL=true). Off by default —
@@ -25,12 +28,3 @@ export const db = drizzle(pool, {
   schema,
   logger: process.env.DEBUG_SQL === 'true',
 });
-
-/**
- * Closes the Neon serverless connection pool for scripts and tests.
- */
-export async function closeDb(): Promise<void> {
-  await pool.end();
-}
-
-export * from 'drizzle-orm';
