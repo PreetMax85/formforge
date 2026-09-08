@@ -215,6 +215,27 @@ deduplication hash," the accurate name. **You knew.** The inflation lives in
 `AGENTS.md`, a document written to instruct an AI, and it got applied to code
 that did not need it.
 
+**One place it has escaped the repo entirely.** The GitHub repository
+description currently reads:
+
+> "A form builder that behaves like a game engine inspector. Drag-and-drop
+> fields, conditional logic, live analytics with funnel dropoffs, custom JWT
+> auth, tiered rate limiting, and **a multi-step identity resolution pipeline
+> for spam resistance**"
+
+That is the highest-visibility text in the entire project — it appears in GitHub
+search results, on your profile, and above the README on the repo page. It is
+the *first* sentence a screener reads, and it is doing three unhelpful things at
+once: it uses the inflated name for the dedupe hash; it advertises "live
+analytics" that currently render 100% on zero responses; and it leads with
+"drag-and-drop fields," the exact interaction a real reviewer could not find.
+
+Fix it in the same sitting as the comments. Something like: *"A form builder
+with a game-engine inspector UI. Drag-and-drop fields, conditional logic
+validated server-side, per-field analytics, JWT auth, and layered spam
+protection."* Same substance, none of the overclaim, and it survives contact
+with someone who opens the app.
+
 ### 1.3 The strongest genuine signals here
 
 Three things would make me take the interview, and I'd want you to lead with
