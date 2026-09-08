@@ -283,6 +283,54 @@ ticket list as Markdown instead.
 
 ---
 
+## 5a. If the skills are not installed
+
+You are running in a cloud sandbox with a fresh checkout. The plugins that
+provide the skills named above live on the author's local machine and **may not
+exist here**. Try invoking them; if a skill does not resolve, do not stall and
+do not treat it as a blocker. Follow the distilled method instead:
+
+- **research** — spawn parallel sub-agents. Each investigates its question
+  against primary sources only (official docs, changelogs, source, specs),
+  follows every claim back to the source that owns it, and returns findings with
+  a URL per claim. Prefer the Context7 connector for library documentation and
+  Exa for everything else. Never cite a secondary write-up.
+- **codebase-design** — the vocabulary is *module*, *interface*, *depth*,
+  *seam*, *adapter*, *leverage*, *locality*. A module is **deep** when a simple
+  interface hides substantial implementation, and **shallow** when its interface
+  costs about as much as its body. The **deletion test**: if you deleted this
+  module, would the complexity concentrate somewhere sensible, or merely
+  scatter? Concentrating is the signal worth acting on. "The interface is the
+  test surface." One adapter is a hypothetical seam; two is a real one. Use
+  these words exactly; do not drift into "component", "service", or "boundary".
+- **to-questionnaire** — the recipient (the author) holds knowledge you lack.
+  Open with **Purpose** (the decision riding on it), a short **Context**
+  paragraph, and **How to answer** (partial answers and "I don't know" are
+  useful). Then `##` sections by theme, most-important-first. Every question is
+  one idea, never compound, with an empty answer stub (`>`) directly beneath it,
+  and a one-line *why this matters* only where a question could be misread.
+  Close with a catch-all: anything we didn't ask that we should know?
+- **verification-before-completion** — before claiming anything works, passes,
+  or is complete, run the command and read the output. Evidence precedes
+  assertion, always. If you could not verify a claim, mark it explicitly as
+  unverified rather than quietly asserting it.
+
+## 5b. Mechanics
+
+Work on a branch named `review/adversarial-pass-2026-09-09`. Commit the
+deliverables there and push it. Open the pull request with `gh pr create`; if
+`gh` is unavailable or unauthenticated, push the branch anyway and state
+clearly in your final message that the PR must be opened by hand, with the
+branch name.
+
+Do not commit anything outside `docs/review/`.
+
+If a tool you need is unavailable, say so explicitly in the report rather than
+working around it silently. A named gap is a finding; a silent omission is a
+defect.
+
+---
+
 ## 6. Deliverables
 
 Open **one pull request** against `main` containing:
