@@ -315,15 +315,51 @@ do not treat it as a blocker. Follow the distilled method instead:
   assertion, always. If you could not verify a claim, mark it explicitly as
   unverified rather than quietly asserting it.
 
-## 5b. Mechanics
+## 5b. Mechanics — verified, not assumed
 
-Work on a branch named `review/adversarial-pass-2026-09-09`. Commit the
-deliverables there and push it. Open the pull request with `gh pr create`; if
-`gh` is unavailable or unauthenticated, push the branch anyway and state
-clearly in your final message that the PR must be opened by hand, with the
-branch name.
+Every statement below was tested against this exact environment on 2026-09-08.
+Follow it literally; do not improvise an alternative.
 
-Do not commit anything outside `docs/review/`.
+**Confirmed working:** repo clone, reading text and **images** (use `Read` on
+the PNGs — it returns real images), spawning parallel sub-agents, `WebSearch`,
+`WebFetch`, the **Exa** and **Context7** MCP tools, `git push`, `SendUserFile`,
+and `PushNotification`.
+
+**Confirmed NOT available:** the `gh` CLI (`command not found`) and the
+`Artifact` tool. **Do not attempt either.** The locally installed skill plugins
+are also absent — `superpowers:*` and `mattpocock-skills:*` will not resolve,
+so use the distilled methods in section 5a.
+
+### Steps
+
+1. `git config user.email 'noreply@anthropic.com' && git config user.name 'Claude'`
+2. `git checkout -b review/adversarial-pass-2026-09-09`
+3. Write the four deliverables. **Commit nothing outside `docs/review/`.**
+4. `git push -u origin review/adversarial-pass-2026-09-09` — this works; auth is
+   via `GIT_ASKPASS` and `GH_TOKEN` over HTTPS through the agent proxy.
+5. Open the pull request with the **GitHub MCP tool**
+   `mcp__github__create_pull_request` (owner `PreetMax85`, repo `formforge`,
+   base `main`). Do not use `gh`.
+
+### Delivery ladder — you must not finish empty-handed
+
+Work down this ladder and do as many rungs as succeed. The author will be
+asleep; a run that completes its analysis and delivers nothing has failed
+completely, and that outcome is worse than a shallower analysis delivered.
+
+1. **Push the branch.** Do this as soon as the first deliverable is written, and
+   again after each subsequent one, rather than saving all pushes for the end. A
+   crash after four hours of work must not lose the work.
+2. **Open the PR** via the GitHub MCP tool. Lead its description with the three
+   findings the author most needs to know, in plain language, above any
+   structure.
+3. **If the PR call fails**, the branch is still pushed — say so explicitly, and
+   name the branch, in both your final message and the notification.
+4. **`SendUserFile`** each of the four deliverables so they reach his device
+   directly, independent of GitHub.
+5. **`PushNotification`** a final summary under 200 characters: whether the PR
+   opened, and the single most important finding. This reaches his phone and is
+   how he will learn the run finished.
 
 If a tool you need is unavailable, say so explicitly in the report rather than
 working around it silently. A named gap is a finding; a silent omission is a
@@ -347,9 +383,9 @@ Open **one pull request** against `main` containing:
 4. `docs/review/2026-09-09-tickets.md` — prioritised, each ticket with its
    blocking edges, sized, and ordered so the first one is the one to do first.
 
-Also **publish the report as an Artifact** and put the link at the top of the PR
-description, so it can be read on a phone. If publishing is unavailable, say so
-in the PR rather than silently skipping it.
+The `Artifact` tool is not available in this environment, so there is no
+web-published version to link. Phone delivery happens through `SendUserFile`
+and `PushNotification` instead, per the delivery ladder in section 5b.
 
 The PR description must open with the three findings the author most needs to
 know, in plain language, above any structure.
