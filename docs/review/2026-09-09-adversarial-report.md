@@ -1,6 +1,8 @@
 # FormForge — Adversarial Revival Pass
 
-**Run:** 2026-09-08/09 · **Branch:** `review/adversarial-pass-2026-09-09` · **Mode:** diagnosis only
+**Run:** 2026-09-08 late UTC = 2026-09-09 early IST — hence the `2026-09-09`
+filenames, which follow the brief's naming. · **Branch:**
+`review/adversarial-pass-2026-09-09` · **Mode:** diagnosis only
 **Personas:** the Screener (decides if you get the interview) and the Believer (thinks this could be a product)
 
 Everything below was verified in this checkout unless explicitly marked
