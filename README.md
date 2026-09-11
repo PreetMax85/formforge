@@ -6,39 +6,6 @@ through a Game Engine Inspector interface.
 
 ---
 
-## Live
-
-| | |
-|---|---|
-| Frontend | https://formforge.jdevs.codes |
-| API | https://api.formforge.jdevs.codes |
-| API Docs | https://api.formforge.jdevs.codes/docs |
-| Explore | https://formforge.jdevs.codes/explore |
-
----
-
-## Demo Credentials
-
-| | |
-|---|---|
-| Demo login | `demo@formforge.jdevs.codes` |
-| Demo password | `Demo@FormForge2026` |
-
----
-
-## Featured Forms
-
-Three themed public forms are seeded in the demo account. Each demonstrates a
-different visual theme from the theme engine.
-
-| Form | Theme |
-|---|---|
-| [/f/samurai-oath](https://formforge.jdevs.codes/f/samurai-oath) | Ghost of Tsushima |
-| [/f/jjk-sorcerer-registration](https://formforge.jdevs.codes/f/jjk-sorcerer-registration) | Jujutsu Kaisen |
-| [/f/aujla-vip-backstage](https://formforge.jdevs.codes/f/aujla-vip-backstage) | Karan Aujla Concert |
-
----
-
 ## Features
 
 - **Drag-and-drop form builder** with 10 implemented field types
