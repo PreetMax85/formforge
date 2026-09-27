@@ -48,9 +48,9 @@ importers:
       '@trpc/server':
         specifier: ^11.8.1
         version: 11.8.1(typescript@5.9.3)
-      bcrypt:
-        specifier: ^5.1.1
-        version: 5.1.1
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -100,9 +100,6 @@ importers:
       '@swc/core':
         specifier: ^1.15.8
         version: 1.15.8(@swc/helpers@0.5.15)
-      '@types/bcrypt':
-        specifier: ^5.0.2
-        version: 5.0.2
       '@types/cookie-parser':
         specifier: ^1.4.8
         version: 1.4.10(@types/express@5.0.6)
@@ -3319,6 +3316,10 @@ packages:
     resolution: {integrity: sha512-AGBHOG5hPYZ5Xl9KXzU5iKq9516yEmvCKDg3ecP5kX2aB6UqTeXZxk2ELnDgDm6BQSMlLt9rDB4LoSMx0rYwww==}
     engines: {node: '>= 10.0.0'}
 
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
+
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
@@ -3973,6 +3974,7 @@ packages:
   eslint@9.39.1:
     resolution: {integrity: sha512-BhHmn2yNOFA9H9JmmIVKJmd288g9hrVRDkdoIgRCRuSySRUHH7r/DI6aAXW9T1WwUuY3DFgrcaqB+deURBLR5g==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -5364,6 +5366,7 @@ packages:
   recharts@2.15.4:
     resolution: {integrity: sha512-UT/q6fwS3c1dHbXv2uFgYJ9BMFHu3fwnd7AYZaEQhXuYQ4hgsxLvsUXzGdKeZrW5xopzDCvuA2N41WJ88I7zIw==}
     engines: {node: '>=14'}
+    deprecated: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
     peerDependencies:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -8946,6 +8949,8 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  bcryptjs@3.0.3: {}
 
   binary-extensions@2.3.0: {}
 
