@@ -162,3 +162,33 @@ describe('GET /api/v1/forms', () => {
     expect(body.data.items[0]).not.toHaveProperty('passwordHash');
   });
 });
+
+describe('GET /health', () => {
+  it('answers without querying the database', async () => {
+    const res = await fetch(`${baseUrl}/health`);
+
+    expect(res.status).toBe(200);
+    expect(db.execute).not.toHaveBeenCalled();
+  });
+
+  it('checks the database when asked for a deep check', async () => {
+    vi.mocked(db.execute).mockResolvedValue({} as never);
+
+    const res  = await fetch(`${baseUrl}/health?deep=1`);
+    const body = (await res.json()) as { db: string };
+
+    expect(res.status).toBe(200);
+    expect(body.db).toBe('connected');
+    expect(db.execute).toHaveBeenCalledOnce();
+  });
+
+  it('reports 503 from the deep check when the database is unreachable', async () => {
+    vi.mocked(db.execute).mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    const res  = await fetch(`${baseUrl}/health?deep=1`);
+    const body = (await res.json()) as { db: string };
+
+    expect(res.status).toBe(503);
+    expect(body.db).toBe('disconnected');
+  });
+});

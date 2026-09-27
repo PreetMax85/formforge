@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
 import { db } from '../../common/db/index';
 import { users, sessions, tokenBlocklist } from '@repo/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { env } from '../../common/config/env';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { ApiError } from '@repo/shared';
@@ -124,7 +124,13 @@ export async function findSessionByHash(hashedToken: string) {
   return session ?? null;
 }
 
+/**
+ * Blocks an access token until it expires, and prunes rows that already have.
+ * Pruning here (on logout, the only writer) keeps the table small without a
+ * background timer, which serverless hosts would not run reliably.
+ */
 export async function blockToken(jti: string, expiresAt: Date) {
+  await db.delete(tokenBlocklist).where(lt(tokenBlocklist.expiresAt, new Date()));
   await db.insert(tokenBlocklist).values({ jti, expiresAt }).onConflictDoNothing();
 }
 

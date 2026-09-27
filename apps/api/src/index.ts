@@ -5,38 +5,22 @@ import { createApp } from './app';
 import { env } from './common/config/env';
 import { logger } from './common/logger';
 import { closeDb, db } from './common/db/index';
-import { tokenBlocklist } from '@repo/db/schema';
-import { lt } from 'drizzle-orm';
-
 import { sql } from 'drizzle-orm';
 
 const app = createApp();
 
-// Verify database connectivity before accepting traffic
+// Check the database once at startup so a bad DATABASE_URL shows up in the
+// logs immediately. A failure is a warning, not a crash: the pool reconnects
+// per query, so the server recovers on its own when the database comes back.
+// There is deliberately no periodic keep-alive query. Neon only scales to zero
+// after 5 idle minutes, and a query every 25 s kept it awake around the clock,
+// which exhausted Neon Free's monthly compute allowance.
 try {
   await db.execute(sql`SELECT 1`);
   logger.info('[API] Database connection verified');
 } catch (err) {
-  logger.error({ err }, '[API] Database connection failed — aborting startup');
-  process.exit(1);
+  logger.warn({ err }, '[API] Database unreachable at startup — serving anyway');
 }
-
-// Periodic cleanup of expired token blocklist entries
-const cleanupTimer = setInterval(async () => {
-  try {
-    await db.delete(tokenBlocklist).where(lt(tokenBlocklist.expiresAt, new Date()));
-  } catch (err) {
-    logger.error({ err }, '[CLEANUP] Token blocklist cleanup failed');
-  }
-}, 15 * 60 * 1000);
-
-const keepAliveTimer = setInterval(async () => {
-  try {
-    await db.execute(sql`SELECT 1`);
-  } catch {
-    // Neon compute may be waking — next request will retry
-  }
-}, 25_000);
 
 const server = app.listen(env.PORT, () => {
   logger.info(`[API] FormForge running on port ${env.PORT} (${env.NODE_ENV})`);
@@ -49,8 +33,6 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
 
   logger.info(`[API] Received ${signal} — shutting down gracefully.`);
-  clearInterval(cleanupTimer);
-  clearInterval(keepAliveTimer);
 
   // Stop accepting new connections; wait for in-flight requests (max 5s).
   await new Promise<void>((resolve) => {
