@@ -10,6 +10,13 @@ jobs:
   check:
     name: Typecheck + Build + Test
     runs-on: ubuntu-latest
+    # Stub values: enough for env validation, never used to reach a real service.
+    env:
+      DATABASE_URL: postgresql://stub:stub@stub/stub
+      JWT_ACCESS_SECRET: stub-secret-minimum-thirty-two-characters-xx
+      JWT_REFRESH_SECRET: stub-secret-minimum-thirty-two-characters-xx
+      APP_URL: https://formforge.jdevs.codes
+      RESEND_API_KEY: re_stub
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -21,9 +28,5 @@ jobs:
       - run: pnpm turbo run typecheck
       - run: pnpm turbo run build
       - run: pnpm turbo run test
-        env:
-          DATABASE_URL: postgresql://stub:stub@stub/stub
-          JWT_ACCESS_SECRET: stub-secret-minimum-thirty-two-characters-xx
-          JWT_REFRESH_SECRET: stub-secret-minimum-thirty-two-characters-xx
-          APP_URL: https://formforge.jdevs.codes
-          RESEND_API_KEY: re_stub
+      - name: Boot smoke test
+        run: scripts/boot-smoke-test.sh
