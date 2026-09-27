@@ -24,10 +24,11 @@ through a Game Engine Inspector interface.
   rule-based insight cards
 - **Identity resolution pipeline** — honeypot anti-spam → Turnstile CAPTCHA →
   spam cluster detection → 30s deduplication hash → transactional insert
-- **Tiered rate limiting** — global, write, submission, and password-reset
-  limiters
+- **Tiered rate limiting** — global, login/signup, token refresh, submission,
+  view-count, and password-reset limiters
 - **QR code sharing** — one-click share modal for every published form
-- **Custom JWT auth** with refresh token rotation, token blocklist, and
+- **Custom JWT auth** with refresh token rotation (30-second grace period for
+  the previous token), token blocklist, and
   cross-subdomain cookie support
 
 ---

@@ -53,8 +53,8 @@ apps/api/src/
     middleware/
       auth.ts                          requireAuth middleware
       optionalAuth.ts                  optionalAuth middleware
-      rateLimit.ts                     globalLimiter / apiWriteLimiter / submissionLimiter /
-                                        viewLimiter / passwordResetLimiter
+      rateLimit.ts                     globalLimiter / apiWriteLimiter / refreshLimiter /
+                                        submissionLimiter / viewLimiter / passwordResetLimiter
       error.ts                         Global error handler — ALWAYS the last middleware
     utils/
       ApiResponse.ts                   (legacy — tRPC routers use inline envelopes)
@@ -69,7 +69,9 @@ apps/api/src/
       responses.ts                     4 procedures (submit public)
       analytics.ts                     7 procedures (internal)
   modules/
-    auth/auth.service.ts
+    auth/
+      auth.service.ts                 Contains rotatedSessionExpiry() + retireSession()
+      auth.service.test.ts            2 Vitest tests
     forms/forms.service.ts             Contains generateUniqueSlug()
     fields/fields.service.ts
     responses/
@@ -194,7 +196,12 @@ Every rule here applies to every file generated. No exceptions.
 
 **Auth**
 - Access token lives in module-scoped JS variable only. Never localStorage. Never sessionStorage.
-- Refresh token in HttpOnly cookie with `SameSite=Lax` (not Strict — different subdomains).
+- Refresh token in HttpOnly cookie with `SameSite=Lax`. Not Strict: Strict drops the
+  cookie when a visitor arrives from a link on another site, so the dashboard's SSR
+  guard would send them to /login.
+- Refresh rotation retires the old session with `retireSession()` (30-second grace
+  period), never deletes it outright. Deleting it logged visitors out whenever the
+  new cookie was lost in flight (a reload during the refresh request).
 - SSR auth guard in `dashboard/layout.tsx` must forward cookies manually to the API.
   Next.js server-side `fetch` does not automatically send browser cookies.
 
@@ -277,7 +284,8 @@ The rate limiters must use these exact export names:
 
 ```typescript
 export const globalLimiter        // Applied to ALL routes via app.use()
-export const apiWriteLimiter      // Applied to auth write routes (login, signup, refresh)
+export const apiWriteLimiter      // Applied to login and signup (30/15min)
+export const refreshLimiter       // Applied to token refresh only (60/15min)
 export const submissionLimiter    // Applied to public form submission (5/15min)
 export const viewLimiter          // Applied to view-count increments (60/15min)
 export const passwordResetLimiter // Applied to forgot/reset-password only
@@ -287,8 +295,11 @@ export const passwordResetLimiter // Applied to forgot/reset-password only
 starved by the strict 5/15min submission cap. Using `submissionLimiter` for view
 increments corrupts the health score (40% weighted on completion rate = responses/views).
 
-`apiWriteLimiter` MUST cover the `refresh` endpoint, not just login + signup.
-Without it, a stolen refresh token can spam session-row creation (DoS via DB bloat).
+`refreshLimiter` MUST cover the `refresh` endpoint. Without a limit, a stolen
+refresh token can spam session-row creation (DoS via DB bloat). It is separate
+from `apiWriteLimiter` because every dashboard page load refreshes: sharing
+login's 30/15min budget bounced active visitors to /login and then refused
+their login too.
 
 `globalLimiter` skips `isServiceBindingCall(req)`: the Next.js server's own
 server-side calls, which reach the API over a Vercel service binding and all
@@ -692,8 +703,16 @@ apps/api/src/app.test.ts
   - public endpoints never expose passwordHash
   - /health is database-free; /health?deep=1 checks the database
 
+apps/api/src/app.rate-limits.test.ts  (own file: fresh limiter counts)
+  - refresh allows 60 requests per window, then answers 429
+  - login keeps its own budget, unspent by refreshes
+
 apps/api/src/common/middleware/rateLimit.test.ts
   - isServiceBindingCall recognises only the internal binding host
+
+apps/api/src/modules/auth/auth.service.test.ts
+  - rotatedSessionExpiry ends a rotated session after the grace period
+  - rotatedSessionExpiry never extends a session that already ends sooner
 
 apps/api/src/modules/responses/responses.service.test.ts
   - rejects text for number field
