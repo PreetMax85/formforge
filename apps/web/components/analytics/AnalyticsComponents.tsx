@@ -105,14 +105,17 @@ export function DropoffFunnel({ data }: DropoffFunnelProps) {
     name:      row.field_label.length > 22
       ? row.field_label.slice(0, 22) + '…'
       : row.field_label,
-    retention: Number(row.retention_pct),
+    // null = no data to compare against: draw no bar rather than 0%
+    retention: row.retention_pct === null ? null : Number(row.retention_pct),
     responses: Number(row.response_count),
   }));
+  // One row per field, so "any rows" only means "any fields".
+  const hasResponses = data.some((row) => Number(row.response_count) > 0);
 
   return (
     <Panel title="Q1 → Qn Drop-off" icon={TrendingDown}>
-      {data.length === 0 ? (
-        <ChartEmpty message="No field data yet. Add fields and collect responses." />
+      {!hasResponses ? (
+        <ChartEmpty message="No responses yet. Drop-off appears once people answer." />
       ) : (
         <ResponsiveContainer width="100%" height={Math.max(data.length * 40, 160)}>
           <BarChart
@@ -122,7 +125,8 @@ export function DropoffFunnel({ data }: DropoffFunnelProps) {
           >
             <XAxis
               type="number"
-              domain={[0, 105]}
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
               tickFormatter={(v: number) => `${v}%`}
               tick={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fill: '#6b7280' }}
               axisLine={false}
@@ -144,7 +148,7 @@ export function DropoffFunnel({ data }: DropoffFunnelProps) {
               background={{ fill: '#1e1e1e' }}
               label={{
                 position: 'right',
-                formatter: (v: number) => `${v}%`,
+                formatter: (v: number | null) => (v === null ? '' : `${v}%`),
                 style: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fill: '#6b7280' },
               }}
             />
@@ -418,11 +422,12 @@ export function FieldBreakdown({ data }: FieldBreakdownProps) {
       : row.field_label,
     count: Number(row.response_count),
   }));
+  const hasResponses = data.some((row) => Number(row.response_count) > 0);
 
   return (
     <Panel title="Field Response Counts" icon={Activity}>
-      {data.length === 0 ? (
-        <ChartEmpty message="No field data yet." />
+      {!hasResponses ? (
+        <ChartEmpty message="No responses yet." />
       ) : (
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ left: 0, right: 8, top: 4, bottom: 40 }}>
