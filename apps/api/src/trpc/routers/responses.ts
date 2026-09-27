@@ -67,7 +67,7 @@ const responsesRouter = router({
     }),
 
   list: protectedProcedure
-    .meta({ openapi: { method: 'GET', path: '/responses', tags: ['Responses'], description: 'Paginated list of responses for a form (owner-only, cursor-based pagination).' } })
+    .meta({ openapi: { enabled: false, method: 'GET', path: '/responses', tags: ['Responses'], description: 'Paginated list of responses for a form (owner-only, cursor-based pagination).' } })
     .input(ListResponsesSchema)
     .query(async ({ input, ctx }) => {
       const result = await listResponses(input.formId, ctx.user.sub, {
@@ -78,7 +78,7 @@ const responsesRouter = router({
     }),
 
   byId: protectedProcedure
-    .meta({ openapi: { method: 'GET', path: '/responses/{id}', tags: ['Responses'], description: 'Fetch a single response with all its answers (owner-only).' } })
+    .meta({ openapi: { enabled: false, method: 'GET', path: '/responses/{id}', tags: ['Responses'], description: 'Fetch a single response with all its answers (owner-only).' } })
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       const response = await getResponseById(input.id, ctx.user.sub);
@@ -86,7 +86,7 @@ const responsesRouter = router({
     }),
 
   delete: protectedProcedure
-    .meta({ openapi: { method: 'DELETE', path: '/responses/{id}', tags: ['Responses'], description: 'Delete a response and all its answers (owner-only).' } })
+    .meta({ openapi: { enabled: false, method: 'DELETE', path: '/responses/{id}', tags: ['Responses'], description: 'Delete a response and all its answers (owner-only).' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       await deleteResponse(input.id, ctx.user.sub);
