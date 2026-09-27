@@ -95,7 +95,8 @@ const safeFormOutputSchema = z.object({
   thankYouMessage: z.string().nullable(),
   maxResponses: z.number().nullable(),
   expiresAt: z.unknown().nullable(),
-  passwordHash: z.string().nullable(),
+  // passwordHash is deliberately absent: .output() strips unlisted keys, which
+  // is what keeps the bcrypt hash out of this public endpoint's response.
   publishedAt: z.unknown().nullable(),
   createdAt: z.unknown(),
   updatedAt: z.unknown(),
@@ -142,7 +143,7 @@ const formsRouter = router({
     }),
 
   explore: publicProcedure
-    .meta({ openapi: { method: 'GET', path: '/forms/explore', tags: ['Forms'], description: 'Paginated list of public published forms with optional search and theme filter.' } })
+    .meta({ openapi: { method: 'GET', path: '/forms', tags: ['Forms'], description: 'Paginated list of public published forms with optional search and theme filter.' } })
     .input(ExploreSchema)
     .output(successEnvelope(exploreOutputSchema))
     .query(async ({ input }) => {

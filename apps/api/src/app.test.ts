@@ -12,11 +12,12 @@ vi.mock('./common/db/index', () => ({
 vi.mock('./modules/forms/forms.service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./modules/forms/forms.service')>()),
   getFormBySlug: vi.fn(),
+  exploreForms:  vi.fn(),
 }));
 
 const { createApp }                   = await import('./app');
 const { db }                          = await import('./common/db/index');
-const { getFormBySlug } = await import('./modules/forms/forms.service');
+const { getFormBySlug, exploreForms } = await import('./modules/forms/forms.service');
 
 const now = new Date('2026-09-01T00:00:00.000Z');
 
@@ -100,7 +101,7 @@ describe('createApp', () => {
       Object.keys(methods).map((method) => `${method.toUpperCase()} ${path}`),
     );
     expect(operations.sort()).toEqual([
-      'GET /forms/explore',
+      'GET /forms',
       'GET /forms/{slug}',
       'POST /forms/{slug}/view',
       'POST /responses/submit',
@@ -135,5 +136,29 @@ describe('GET /api/v1/forms/{slug}', () => {
     const body = (await res.json()) as { data: Record<string, unknown> };
 
     expect(body.data).not.toHaveProperty('passwordHash');
+  });
+});
+
+describe('GET /api/v1/forms', () => {
+  it('lists public forms without being captured by the {slug} route', async () => {
+    vi.mocked(exploreForms).mockResolvedValue({ items: [seededForm], nextCursor: null });
+
+    const res  = await fetch(`${baseUrl}/api/v1/forms?limit=10`);
+    const body = (await res.json()) as { data: { items: unknown[]; nextCursor: string | null } };
+
+    expect(res.status).toBe(200);
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.nextCursor).toBeNull();
+  });
+
+  it('never exposes the form password hash', async () => {
+    vi.mocked(exploreForms).mockResolvedValue({ items: [seededForm], nextCursor: null });
+
+    const res  = await fetch(`${baseUrl}/api/v1/forms?limit=10`);
+    const body = (await res.json()) as { data: { items: Record<string, unknown>[] } };
+
+    expect(res.status).toBe(200);
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]).not.toHaveProperty('passwordHash');
   });
 });
