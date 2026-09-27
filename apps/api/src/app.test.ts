@@ -18,6 +18,7 @@ vi.mock('./modules/forms/forms.service', async (importOriginal) => ({
 const { createApp }                   = await import('./app');
 const { db }                          = await import('./common/db/index');
 const { getFormBySlug, exploreForms } = await import('./modules/forms/forms.service');
+const { ApiError }                    = await import('@repo/shared');
 
 const now = new Date('2026-09-01T00:00:00.000Z');
 
@@ -127,6 +128,17 @@ describe('GET /api/v1/forms/{slug}', () => {
     }
     expect(field?.config).toEqual(seededField.config);
     expect(field?.conditions).toEqual(seededField.conditions);
+  });
+
+  it('answers 404 for an unknown slug, over REST and tRPC', async () => {
+    vi.mocked(getFormBySlug).mockRejectedValue(ApiError.notFound('Form not found'));
+
+    const rest = await fetch(`${baseUrl}/api/v1/forms/no-such-form`);
+    const trpc = await fetch(`${baseUrl}/trpc/forms.bySlug?input=${encodeURIComponent(JSON.stringify({ slug: 'no-such-form' }))}`);
+
+    expect(rest.status).toBe(404);
+    expect(trpc.status).toBe(404);
+    expect(JSON.stringify(await trpc.json())).toContain('Form not found');
   });
 
   it('never exposes the form password hash', async () => {
