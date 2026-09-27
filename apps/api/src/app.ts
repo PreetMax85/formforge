@@ -17,6 +17,7 @@ import { errorHandler } from './common/middleware/error';
 import {
   globalLimiter,
   apiWriteLimiter,
+  refreshLimiter,
   passwordResetLimiter,
   submissionLimiter,
   viewLimiter,
@@ -67,14 +68,14 @@ export function createApp(): express.Application {
 
   app.use('/api/auth/login',           apiWriteLimiter);
   app.use('/api/auth/signup',          apiWriteLimiter);
-  app.use('/api/auth/refresh',         apiWriteLimiter);
+  app.use('/api/auth/refresh',         refreshLimiter);
   app.use('/api/auth/forgot-password', passwordResetLimiter);
   app.use('/api/auth/reset-password',  passwordResetLimiter);
 
   // tRPC auth endpoints also need write-rate limits
   app.use('/trpc/auth.login',   apiWriteLimiter);
   app.use('/trpc/auth.signup',  apiWriteLimiter);
-  app.use('/trpc/auth.refresh', apiWriteLimiter);
+  app.use('/trpc/auth.refresh', refreshLimiter);
 
   // Public form submission endpoints — stricter limiter on top of globalLimiter
   app.use('/api/v1/responses/submit', submissionLimiter);

@@ -3,6 +3,9 @@ import type { Request } from 'express';
 
 // Tiered rate limiting strategy with cascading defense:
 // globalLimiter → apiWriteLimiter → submissionLimiter
+// refreshLimiter gives token refresh its own budget: every dashboard page
+// load refreshes, so sharing apiWriteLimiter's 30 with login and signup
+// bounced active visitors to /login and then refused the login as well.
 // viewLimiter is a separate, more lenient limiter for view-count
 // increments so analytics aren't skewed by the strict submission cap.
 
@@ -35,6 +38,14 @@ export const globalLimiter = rateLimit({
 export const apiWriteLimiter = rateLimit({
   windowMs:        15 * 60 * 1000,
   max:             30,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { success: false, error: 'Too many requests. Please try again later.' },
+});
+
+export const refreshLimiter = rateLimit({
+  windowMs:        15 * 60 * 1000,
+  max:             60,
   standardHeaders: true,
   legacyHeaders:   false,
   message:         { success: false, error: 'Too many requests. Please try again later.' },
