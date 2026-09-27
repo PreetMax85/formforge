@@ -1,4 +1,3 @@
-import BootScreen        from './_components/BootScreen';
 import HeroSection       from './_components/HeroSection';
 import FeaturesSection   from './_components/FeaturesSection';
 import ThemesSection     from './_components/ThemesSection';
@@ -13,15 +12,6 @@ export const metadata = {
 export default function LandingPage() {
   return (
     <>
-      {/*
-        BootScreen is a 'use client' component rendered as a fixed overlay
-        (z-index 200, above Navbar's z-50). It reads sessionStorage on mount
-        and only shows on the first visit per browser session. The <main>
-        below is unaffected — it renders normally underneath the overlay and
-        becomes fully interactive the moment the boot animation exits.
-      */}
-      <BootScreen />
-
       <main
         style={{
           background: '#0e0e0e',

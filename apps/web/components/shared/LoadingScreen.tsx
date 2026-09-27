@@ -8,10 +8,9 @@
  *   'inline'     — contained block, used inside dashboard panels and cards
  *
  * All animations use framer-motion. No raw CSS animation strings.
- * Boot message pool is sampled once on mount via useMemo.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 
@@ -24,43 +23,20 @@ export interface LoadingScreenProps {
   readonly showProgressBar?: boolean;
 }
 
-// ─── Boot message pool ────────────────────────────────────────────────────────
+// ─── Boot lines ───────────────────────────────────────────────────────────────
 
-const BOOT_POOL = [
+// A fixed sequence, not a random sample: this component is server-rendered,
+// and Math.random() picked different lines on the server and in the browser,
+// which caused a hydration error on every dashboard page load.
+const BOOT_LINES: readonly string[] = [
   'Forging the workspace',
-  'Spinning up the builder',
-  'Priming the engine',
   'Mounting the inspector',
-  'Unpacking the field types',
-  'Warming up the terminal',
-  'Polishing the pixels',
-  'Loading the arena',
-  'Calibrating the drag system',
-  'Seeding the database',
-  'Compiling shaders',
-  'Initializing the renderer',
   'Loading form schema',
   'Syncing field registry',
-  'Preparing response pipeline',
   'Calculating analytics',
-  'Hydrating UI components',
-] as const;
+];
 
 const SCENE_READY = 'Scene ready' as const;
-
-/**
- * Picks `count` unique items from the pool using Fisher-Yates on a copy.
- * Called once inside useMemo — safe to use Math.random() here because this
- * is purely cosmetic UI randomisation with no data or seed implications.
- */
-function samplePool(count: number): readonly string[] {
-  const copy = [...BOOT_POOL];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-  }
-  return copy.slice(0, count);
-}
 
 // ─── Timing constants ─────────────────────────────────────────────────────────
 
@@ -366,8 +342,7 @@ export default function LoadingScreen({
   showProgressBar = true,
 }: LoadingScreenProps) {
 
-  // Pick 5 messages once on mount — stable across re-renders
-  const lines = useMemo(() => samplePool(5), []);
+  const lines = BOOT_LINES;
 
   const INITIAL_LINES  = 3;
   const INITIAL_CHECKS = 2;
@@ -375,7 +350,7 @@ export default function LoadingScreen({
   const [linesVisible,  setLinesVisible]  = useState(INITIAL_LINES);
   const [checksVisible, setChecksVisible] = useState(INITIAL_CHECKS);
 
-  // Drive line reveals: 6 lines total (5 pool + Scene ready), 200ms apart.
+  // Drive line reveals: 6 lines total (5 boot lines + Scene ready), 200ms apart.
   // First 3 lines pre-render instantly so the screen is meaningful even on sub-500ms loads.
   useEffect(() => {
     const totalLines = lines.length + 1; // +1 for Scene ready
