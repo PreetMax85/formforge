@@ -3,7 +3,12 @@ export interface DropoffRow {
   field_label:    string;
   field_order:    number;
   response_count: number;
-  retention_pct:  number;
+  /**
+   * Percentage of the previous field's answer count that answered this one
+   * (100 for the first field). Null when there is nothing to compare against:
+   * the first field has no answers, or the previous field has none.
+   */
+  retention_pct:  number | null;
 }
 
 export interface FunnelStage {
