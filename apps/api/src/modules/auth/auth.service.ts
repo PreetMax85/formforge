@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { createHash } from 'crypto';
 import { db } from '../../common/db/index';
 import { users, sessions, tokenBlocklist } from '@repo/db/schema';
-import { eq, lt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import { env } from '../../common/config/env';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { ApiError } from '@repo/shared';
@@ -109,6 +109,33 @@ export async function saveSession(
 export async function revokeSession(refreshToken: string) {
   const hashed = createHash('sha256').update(refreshToken).digest('hex');
   await db.delete(sessions).where(eq(sessions.refreshToken, hashed));
+}
+
+/**
+ * Expiry for a refresh session that has just been rotated: the end of the
+ * grace period, or the session's own expiry if that comes first, so reusing
+ * a rotated token never extends it.
+ */
+export function rotatedSessionExpiry(currentExpiresAt: Date, now: Date): Date {
+  const graceEnd = new Date(now.getTime() + AUTH_CONSTANTS.ROTATION_GRACE_MS);
+  return currentExpiresAt < graceEnd ? currentExpiresAt : graceEnd;
+}
+
+/**
+ * Retires a refresh session after rotation. Deleting it outright logged the
+ * visitor out whenever the rotated cookie failed to reach the browser, so it
+ * keeps working for the grace period instead. Also prunes the user's expired
+ * sessions, which keeps one leftover row per refresh from piling up.
+ */
+export async function retireSession(session: { id: string; userId: string; expiresAt: Date }) {
+  const now = new Date();
+  await db
+    .update(sessions)
+    .set({ expiresAt: rotatedSessionExpiry(session.expiresAt, now) })
+    .where(eq(sessions.id, session.id));
+  await db
+    .delete(sessions)
+    .where(and(eq(sessions.userId, session.userId), lt(sessions.expiresAt, now)));
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {

@@ -7,6 +7,7 @@ import {
   createTokens,
   saveSession,
   revokeSession,
+  retireSession,
   verifyRefreshToken,
   findSessionByHash,
   blockToken,
@@ -106,7 +107,7 @@ const authRouter = router({
     }),
 
   refresh: publicProcedure
-    .meta({ openapi: { enabled: false, method: 'POST', path: '/auth/refresh', tags: ['Auth'], description: 'Exchange a valid refresh token (HttpOnly cookie) for a new access token. Rotates the refresh token.' } })
+    .meta({ openapi: { enabled: false, method: 'POST', path: '/auth/refresh', tags: ['Auth'], description: 'Exchange a valid refresh token (HttpOnly cookie) for a new access token. Rotates the refresh token; the old one keeps working for a 30-second grace period.' } })
     .mutation(async ({ ctx }) => {
       const refreshToken = ctx.req.cookies?.[AUTH_CONSTANTS.REFRESH_COOKIE_NAME];
       if (!refreshToken) {
@@ -133,8 +134,9 @@ const authRouter = router({
         throw ApiError.unauthorized('Session expired or not found');
       }
 
-      // Revoke old session first — prevents duplicate sessions from concurrent refresh
-      await revokeSession(refreshToken);
+      // Rotate: the old token keeps working for a short grace period rather
+      // than dying at once (see retireSession), then a new one is issued.
+      await retireSession(session);
       const tokens = createTokens(payload.sub, payload.email);
       await saveSession(payload.sub, tokens.refresh.token, tokens.refresh.jti, ctx.req.headers['user-agent']);
       setRefreshCookie(ctx.res, tokens.refresh.token);
