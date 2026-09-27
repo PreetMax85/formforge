@@ -348,6 +348,18 @@ export default function BuilderPage() {
   }
 
   /* ── Publish ─────────────────────────────────────────────────── */
+  // Publishing uses the last saved fields, so unsaved work would silently
+  // be left out of the live form. Ask for a save first, as PLAY does.
+  function handlePublish() {
+    if (isDirty) {
+      toast('Save your changes first before publishing.', {
+        action: { label: 'Save', onClick: handleSave },
+      });
+      return;
+    }
+    setPublishModalOpen(true);
+  }
+
   function handlePublishConfirm(visibility: 'public' | 'unlisted') {
     publishMutation.mutate({ id: formId, visibility });
   }
@@ -443,7 +455,7 @@ export default function BuilderPage() {
               formTitle={form.title}
               formId={formId}
               onPlay={handlePlay}
-              onPublish={() => setPublishModalOpen(true)}
+              onPublish={handlePublish}
               isPublishing={publishMutation.isPending}
               hasUnsavedChanges={isDirty}
             />
