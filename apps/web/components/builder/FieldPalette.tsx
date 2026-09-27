@@ -1,6 +1,7 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
+import { GripVertical } from 'lucide-react';
 import { FIELD_TYPE_META } from './FieldCard';
 import type { FieldType } from '~/lib/types/field';
 
@@ -19,11 +20,20 @@ const FIELD_TYPES: FieldType[] = [
 
 interface DraggableFieldButtonProps {
   type: FieldType;
+  onAdd: (type: FieldType) => void;
 }
 
-/** Single draggable palette item */
-function DraggableFieldButton({ type }: DraggableFieldButtonProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+/**
+ * Single palette item. Clicking it (or pressing Enter/Space) adds the field;
+ * dragging it onto the canvas does the same thing, because drop position is
+ * ignored and new fields are always appended.
+ *
+ * dnd-kit's `attributes` are deliberately not spread: they would announce the
+ * row as "draggable" with press-space-to-pick-up instructions, but no keyboard
+ * sensor is registered. As a native <button>, Enter/Space trigger the click.
+ */
+function DraggableFieldButton({ type, onAdd }: DraggableFieldButtonProps) {
+  const { listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${type}`,
     data: { type, fromPalette: true },
   });
@@ -32,11 +42,13 @@ function DraggableFieldButton({ type }: DraggableFieldButtonProps) {
   const Icon = meta.icon;
 
   return (
-    <div
+    <button
+      type="button"
       ref={setNodeRef}
       {...listeners}
-      {...attributes}
-      className="flex items-center gap-2 px-2.5 py-2 w-full cursor-grab active:cursor-grabbing transition-colors"
+      onClick={() => onAdd(type)}
+      title={`Add a ${meta.label} field (click, or drag onto the form)`}
+      className="flex items-center gap-2 pl-1.5 pr-2.5 py-2 w-full text-left cursor-pointer active:cursor-grabbing transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-[#569cd6] focus-visible:-outline-offset-1"
       style={{
         background: isDragging ? `${meta.color}18` : 'transparent',
         borderLeft: `2px solid ${isDragging ? meta.color : 'transparent'}`,
@@ -45,19 +57,20 @@ function DraggableFieldButton({ type }: DraggableFieldButtonProps) {
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          const el = e.currentTarget as HTMLDivElement;
+          const el = e.currentTarget as HTMLButtonElement;
           el.style.background = '#2a2a2a';
           el.style.borderLeftColor = meta.color;
         }
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
-          const el = e.currentTarget as HTMLDivElement;
+          const el = e.currentTarget as HTMLButtonElement;
           el.style.background = 'transparent';
           el.style.borderLeftColor = 'transparent';
         }
       }}
     >
+      <GripVertical size={12} aria-hidden style={{ color: '#858585', flexShrink: 0 }} />
       <Icon size={13} style={{ color: meta.color, flexShrink: 0 }} />
       <span
         style={{
@@ -79,16 +92,20 @@ function DraggableFieldButton({ type }: DraggableFieldButtonProps) {
       >
         {meta.shortLabel}
       </span>
-    </div>
+    </button>
   );
+}
+
+interface FieldPaletteProps {
+  onAdd: (type: FieldType) => void;
 }
 
 /**
  * Field type palette — rendered inside the HierarchyPanel below the field list.
- * Each item is a @dnd-kit useDraggable source.
- * Drop onto BuilderCanvas to instantiate a new field.
+ * Each item adds a field on click, and is also a @dnd-kit useDraggable source
+ * that adds the same field when dropped onto BuilderCanvas.
  */
-export function FieldPalette() {
+export function FieldPalette({ onAdd }: FieldPaletteProps) {
   return (
     <div>
       <div
@@ -109,7 +126,7 @@ export function FieldPalette() {
       </div>
       <div>
         {FIELD_TYPES.map((type) => (
-          <DraggableFieldButton key={type} type={type} />
+          <DraggableFieldButton key={type} type={type} onAdd={onAdd} />
         ))}
       </div>
     </div>

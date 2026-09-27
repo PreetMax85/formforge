@@ -1,6 +1,6 @@
 'use client';
 
-import { GripVertical, GitBranch } from 'lucide-react';
+import { GitBranch } from 'lucide-react';
 import { FIELD_TYPE_META } from '~/components/builder/FieldCard';
 import type { Field } from '~/lib/types/field';
 
@@ -12,8 +12,9 @@ interface HierarchyPanelProps {
 
 /**
  * Left-side Project Hierarchy panel.
- * Lists all form fields in order with their type badge and drag handle indicator.
- * Clicking a field selects it in the Inspector.
+ * Lists all form fields in order with their type badge.
+ * Clicking a field selects it in the Inspector. Rows are not draggable —
+ * reorder on the canvas, where the grip handles are.
  */
 export function HierarchyPanel({ fields, activeFieldId, onSelect }: HierarchyPanelProps) {
   if (fields.length === 0) {
@@ -22,11 +23,11 @@ export function HierarchyPanel({ fields, activeFieldId, onSelect }: HierarchyPan
         className="flex flex-col items-center justify-center h-full px-4 text-center"
         style={{ gap: '8px' }}
       >
-        <span style={{ fontSize: '11px', color: '#4b5563', fontFamily: "'JetBrains Mono', monospace" }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
           No assets in scene.
         </span>
-        <span style={{ fontSize: '10px', color: '#374151', fontFamily: "'JetBrains Mono', monospace" }}>
-          Drag a field to instantiate.
+        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+          Click a field type below to add it.
         </span>
       </div>
     );
@@ -114,12 +115,6 @@ export function HierarchyPanel({ fields, activeFieldId, onSelect }: HierarchyPan
                   style={{ color: '#c586c0', flexShrink: 0 }}
                 />
               )}
-
-              {/* Grip */}
-              <GripVertical
-                size={12}
-                style={{ color: '#3c3c3c', flexShrink: 0 }}
-              />
             </button>
           </li>
         );

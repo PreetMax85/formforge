@@ -157,6 +157,33 @@ export default function BuilderPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
+  /* ── Add field ───────────────────────────────────────────────── */
+  // Clicking a palette row and dropping it on the canvas both land here, and
+  // both append: the drop position is not used.
+  const addField = useCallback(
+    (type: FieldType) => {
+      const label = defaultLabel(type);
+      const newField: Field = {
+        id: tempId(),
+        formId,
+        type,
+        label,
+        placeholder: null,
+        description: null,
+        required: false,
+        order: 0,
+        config: defaultConfig(type),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setFields((prev) => [...prev, { ...newField, order: prev.length }]);
+      setActiveFieldId(newField.id);
+      setIsDirty(true);
+      pushLog('info', `Asset "${label}" added to scene (unsaved)`);
+    },
+    [formId]
+  );
+
   /* ── DnD handlers ────────────────────────────────────────────── */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -168,25 +195,7 @@ export default function BuilderPage() {
 
       // New field dropped from palette onto canvas
       if (activeId.startsWith('palette-') && overId === DROPPABLE_ID) {
-        const type = active.data.current?.type as FieldType;
-        const label = defaultLabel(type);
-        const newField: Field = {
-          id: tempId(),
-          formId,
-          type,
-          label,
-          placeholder: null,
-          description: null,
-          required: false,
-          order: 0,
-          config: defaultConfig(type),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setFields((prev) => [...prev, { ...newField, order: prev.length }]);
-        setActiveFieldId(newField.id);
-        setIsDirty(true);
-        pushLog('info', `Asset "${label}" added to scene (unsaved)`);
+        addField(active.data.current?.type as FieldType);
         return;
       }
 
@@ -201,7 +210,7 @@ export default function BuilderPage() {
         setIsDirty(true);
       }
     },
-    [formId]
+    [addField]
   );
 
   const handleDragOver = useCallback((_event: DragOverEvent) => {
@@ -437,7 +446,7 @@ export default function BuilderPage() {
                   onSelect={setActiveFieldId}
                 />
               </div>
-              <FieldPalette />
+              <FieldPalette onAdd={addField} />
             </div>
           }
           scene={

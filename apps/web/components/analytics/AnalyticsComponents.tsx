@@ -50,7 +50,7 @@ function ChartEmpty({ message }: { message: string }) {
         style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize:   '11px',
-          color:      '#374151',
+          color:      'var(--text-secondary)',
         }}
       >
         {message}
