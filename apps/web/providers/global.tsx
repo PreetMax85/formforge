@@ -7,6 +7,7 @@ import { Toaster } from "~/components/ui/sonner";
 import { httpBatchLink } from "@trpc/client";
 import { trpc } from "~/trpc/client";
 import { getAccessToken } from "~/lib/auth";
+import { API_URL } from "~/lib/api-url";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,16 +20,12 @@ const queryClient = new QueryClient({
   },
 });
 
-const getBaseUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-};
-
 export const GlobalProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: `${getBaseUrl()}/trpc`,
+          url: `${API_URL}/trpc`,
           headers() {
             const token = getAccessToken();
             return token ? { Authorization: `Bearer ${token}` } : {};

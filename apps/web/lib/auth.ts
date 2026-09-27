@@ -1,3 +1,5 @@
+import { API_URL } from './api-url';
+
 let _accessToken: string | null = null;
 let _refreshPromise: Promise<boolean> | null = null;
 
@@ -30,7 +32,7 @@ export async function initAuth(): Promise<boolean> {
 
   _refreshPromise = (async () => {
     try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'}/trpc/auth.refresh`;
+      const url = `${API_URL}/trpc/auth.refresh`;
       const res = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation';
 import { FormRenderer } from '~/components/form/FormRenderer';
 import { ThemeBackground } from '~/components/shared/ThemeBackground';
 import type { Field } from '~/lib/types/field';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+import { SERVER_API_URL } from '~/lib/api-url';
+import ViewCounter from './ViewCounter';
 
 interface PublicFormPageProps {
   params: Promise<{ slug: string }>;
@@ -11,7 +11,8 @@ interface PublicFormPageProps {
 
 /**
  * Public form page — no auth required.
- * Server component: fetches form + fields, injects theme, increments view count.
+ * Server component: fetches form + fields and injects the theme. The view count
+ * is incremented from the browser by <ViewCounter>.
  * Renders FormRenderer in mode='live'.
  */
 export default async function PublicFormPage({ params }: PublicFormPageProps) {
@@ -20,7 +21,7 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
   /* ── Fetch form + fields from backend ───────────────────────────── */
   let form: FormWithFields | null = null;
 
-  const res = await fetch(`${API_URL}/api/v1/forms/${slug}`, { cache: 'no-store' });
+  const res = await fetch(`${SERVER_API_URL}/api/v1/forms/${encodeURIComponent(slug)}`, { cache: 'no-store' });
 
   if (res.status === 404) notFound();
 
@@ -51,16 +52,6 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
     return <FormUnavailable message="This form is no longer accepting responses." />;
   }
 
-  /* ── Fire-and-forget view count increment ───────────────────────── */
-  void fetch(`${API_URL}/api/v1/forms/${slug}/view`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({}),
-    cache:  'no-store',
-  }).catch(() => {
-    // Non-critical — silently ignore failures
-  });
-
   /* ── Render ─────────────────────────────────────────────────────── */
   return (
     <div
@@ -68,6 +59,7 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
       className="min-h-screen"
       style={{ background: 'var(--bg-primary)' }}
     >
+      <ViewCounter slug={form.slug} />
       {/* Ambient background effect for all themed forms */}
       {(form.theme === 'matrix' ||
         form.theme === 'jujutsu-kaisen' ||
@@ -178,7 +170,7 @@ function FormUnavailable({ message }: { message: string }) {
 export async function generateMetadata({ params }: PublicFormPageProps) {
   const { slug } = await params;
   try {
-    const res = await fetch(`${API_URL}/api/v1/forms/${slug}`, { cache: 'no-store' });
+    const res = await fetch(`${SERVER_API_URL}/api/v1/forms/${encodeURIComponent(slug)}`, { cache: 'no-store' });
     if (!res.ok) return { title: 'Form | FormForge' };
     const body = (await res.json()) as ApiEnvelope<{ title: string; description: string | null }>;
     return {
