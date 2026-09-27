@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { sql, eq, and, desc, lt, inArray, isNull, or, type SQL } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';

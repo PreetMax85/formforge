@@ -30,6 +30,8 @@ Email:     Resend + React Email
 Monitoring: Sentry (@sentry/nextjs v8 — requires webpack build, not Turbopack)
 API Docs:  Scalar (via trpc-to-openapi)
 Monorepo:  Turborepo + pnpm workspaces
+Hosting:   Vercel Services, one project (vercel.json): Next.js at /, Express on
+           /trpc, /api/v1, /docs, /openapi.json, /health. Region sin1.
 ```
 
 ---
@@ -41,7 +43,8 @@ Use these paths precisely. Never create alternative folder structures.
 ```
 apps/api/src/
   instrument.ts                        Sentry init — imported FIRST in index.ts
-  index.ts                             Entry point: imports createApp, calls listen
+  index.ts                             Long-running server: imports createApp, calls listen
+  serverless.ts                        Vercel entry: default-exports createApp()
   app.ts                               createApp() factory — all middleware lives here
   common/
     config/env.ts                      Zod env validation with process.exit(1)
@@ -60,11 +63,11 @@ apps/api/src/
     context.ts
     router.ts                          AppRouter export + openApiDocument export
     routers/
-      auth.ts                          6 procedures, all annotated with .meta()
-      forms.ts                         13 procedures, all annotated
-      fields.ts                        3 procedures, all annotated
-      responses.ts                     4 procedures, all annotated
-      analytics.ts                     7 procedures, all annotated
+      auth.ts                          6 procedures (internal)
+      forms.ts                         13 procedures (bySlug, incrementView, explore public)
+      fields.ts                        3 procedures (internal)
+      responses.ts                     4 procedures (submit public)
+      analytics.ts                     7 procedures (internal)
   modules/
     auth/auth.service.ts
     forms/forms.service.ts             Contains generateUniqueSlug()
@@ -287,6 +290,10 @@ increments corrupts the health score (40% weighted on completion rate = response
 `apiWriteLimiter` MUST cover the `refresh` endpoint, not just login + signup.
 Without it, a stolen refresh token can spam session-row creation (DoS via DB bloat).
 
+`globalLimiter` skips `isServiceBindingCall(req)`: the Next.js server's own
+server-side calls, which reach the API over a Vercel service binding and all
+share one IP. Browser calls carry the visitor's real IP and are limited normally.
+
 ---
 
 ## 6. Required Verbatim Comments
@@ -343,7 +350,7 @@ place it in `computeResponseCompletionFunnel` (which does not use CTEs).
 
 ```typescript
 // Distributed token revocation store — enables stateless JWT invalidation
-// without shared session state. Periodic TTL-based cleanup via setInterval.
+// without shared session state. Expired rows are pruned by blockToken().
 ```
 
 ---
@@ -441,7 +448,20 @@ app.listen(env.PORT, () => { logger.info(`Running on ${env.PORT}`); });
 ```
 
 `index.ts` is thin. All logic is in `app.ts`. This enables importing `createApp()`
-in test files without starting the server.
+in test files without starting the server, and lets `serverless.ts` export the
+same app for Vercel.
+
+The API runs as a Vercel Function: work happens only inside a request. Scheduled
+or periodic work (cleanup, keep-alive queries) belongs inside the request that
+needs it, like the blocklist prune in `blockToken()`. A periodic database query
+also keeps Neon from scaling to zero, which exhausted the Free plan's compute
+once. `/health` stays database-free; `/health?deep=1` checks the database.
+
+`tsup` builds two outputs: `dist/index.js` (ESM, long-running) and
+`dist/vercel/index.js` (one self-contained CommonJS file, every dependency
+inlined), because Vercel's Express builder runs `<outputDirectory>/index.js` as
+CommonJS without resolvable `node_modules`. Dependencies must therefore be pure
+JavaScript: `bcryptjs`, not native `bcrypt`.
 
 ---
 
@@ -620,19 +640,24 @@ Cursor schema fields use `z.string()`, not `z.string().uuid()`.
 
 ## 18. OpenAPI Annotations
 
-Every tRPC procedure must have `.meta({ openapi: { method, path, tags, description } })`.
-This powers the Scalar API docs at `/docs`. All 33 procedures across 5 routers
-are annotated.
+Every tRPC procedure has `.meta({ openapi: { method, path, tags, description } })`
+and is one of two kinds:
 
-Tags group endpoints in the docs:
-- `['Auth']` — 6 procedures
-- `['Forms']` — 13 procedures
-- `['Fields']` — 3 procedures
-- `['Responses']` — 4 procedures
-- `['Analytics']` — 7 procedures
+- **Public** (served at `/api/v1` and documented at `/docs`): also has an
+  `.output()` Zod schema. `trpc-to-openapi` throws at startup for an enabled
+  procedure without one, which kept the API from booting for three months.
+  Public today: `forms.bySlug`, `forms.incrementView`, `forms.explore`
+  (`GET /forms`), `responses.submit`. The public form page fetches `bySlug`
+  through `/api/v1`, so it must keep working there.
+- **Internal** (reached only through `/trpc`): sets `openapi.enabled: false`.
 
-Use `/forms/by-id/{id}` for authenticated form lookup to avoid path collision
-with the public `/forms/{slug}` route.
+`.output()` strips every key the schema does not list, silently. That is how
+`passwordHash` stays out of public responses, and also how a missing key breaks
+the frontend. `apps/api/src/app.test.ts` asserts the keys the public form page
+reads; extend it when you add a public procedure.
+
+A literal REST path must not sit under a parameterised one (`/forms/explore` is
+captured by `/forms/{slug}`).
 
 ---
 
@@ -660,6 +685,16 @@ layout that `error.tsx` cannot capture. It calls `Sentry.captureException`.
 ## 20. Test File Locations and Scope
 
 ```
+apps/api/src/app.test.ts
+  - OpenAPI document lists only the public endpoints
+  - /api/v1/forms/{slug} returns every property the public form page reads
+  - unknown slug answers 404 over REST and tRPC
+  - public endpoints never expose passwordHash
+  - /health is database-free; /health?deep=1 checks the database
+
+apps/api/src/common/middleware/rateLimit.test.ts
+  - isServiceBindingCall recognises only the internal binding host
+
 apps/api/src/modules/responses/responses.service.test.ts
   - rejects text for number field
   - rejects missing required field
@@ -694,6 +729,10 @@ packages/shared/src/utils/buildFieldZodSchema.test.ts
 ```
 
 Use `describe`, `it`, `expect` from Vitest. No test framework other than Vitest.
+
+Unit tests passed for the three months the API could not start. After any API
+change, also run `scripts/boot-smoke-test.sh` (CI runs it too): it starts the
+real server and fails unless `/health`, `/openapi.json` and `/docs` answer.
 
 ---
 

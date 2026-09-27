@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { API_URL } from '~/lib/api-url';
 
 const NAV_LINKS = [
   { label: 'Explore',  href: '/explore' },
   { label: 'Pricing',  href: '/pricing' },
-  { label: 'Docs',     href: process.env.NEXT_PUBLIC_API_URL
-                          ? `${process.env.NEXT_PUBLIC_API_URL}/docs`
-                          : '/docs' },
+  { label: 'Docs',     href: `${API_URL}/docs` },
 ] as const;
 
 export default function Navbar() {

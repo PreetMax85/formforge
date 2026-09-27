@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import DashboardAuthGate from './DashboardAuthGate';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+import { SERVER_API_URL } from '~/lib/api-url';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -15,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Validate session without rotating the refresh token.
   // auth.validate does not revoke or create new cookies — safe for SSR.
   try {
-    const res = await fetch(`${API_URL}/trpc/auth.validate`, {
+    const res = await fetch(`${SERVER_API_URL}/trpc/auth.validate`, {
       method: 'GET',
       headers: {
         Cookie: `refresh_token=${refreshToken.value}`,

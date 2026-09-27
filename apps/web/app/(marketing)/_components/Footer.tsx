@@ -1,13 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { API_URL } from '~/lib/api-url';
 
 const PRODUCT_LINKS = [
   { label: 'Explore Forms', href: '/explore'  },
   { label: 'Pricing',       href: '/pricing'  },
-  { label: 'API Docs',      href: process.env.NEXT_PUBLIC_API_URL
-                              ? `${process.env.NEXT_PUBLIC_API_URL}/docs`
-                              : '/docs',
+  { label: 'API Docs',      href: `${API_URL}/docs`,
     external: true },
 ] as const;
 

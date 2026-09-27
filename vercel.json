@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "apps/web",
+      "framework": "nextjs",
+      "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+      "buildCommand": "cd ../.. && pnpm turbo run build --filter=@repo/web",
+      "bindings": [
+        { "type": "service", "service": "api", "format": "url", "env": "API_ORIGIN" }
+      ]
+    },
+    "api": {
+      "root": "apps/api",
+      "framework": "express",
+      "entrypoint": "src/serverless.ts",
+      "outputDirectory": "dist/vercel",
+      "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+      "buildCommand": "cd ../.. && pnpm turbo run build --filter=@repo/api"
+    }
+  },
+  "regions": ["sin1"],
+  "rewrites": [
+    { "source": "/trpc/(.*)", "destination": { "service": "api" } },
+    { "source": "/api/v1/(.*)", "destination": { "service": "api" } },
+    { "source": "/docs", "destination": { "service": "api" } },
+    { "source": "/docs/(.*)", "destination": { "service": "api" } },
+    { "source": "/openapi.json", "destination": { "service": "api" } },
+    { "source": "/health", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

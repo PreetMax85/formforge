@@ -102,22 +102,28 @@ export function createApp(): express.Application {
     theme: 'saturn',
   }));
 
-  // Health check
-  app.get('/health', asyncHandler(async (_req, res) => {
-    let dbStatus = 'connected';
+  // Health check. Plain /health never touches the database, so uptime monitors
+  // and the CI boot check can't keep Neon awake (it only scales to zero after
+  // 5 idle minutes, and Neon Free's compute allowance runs out if it never
+  // sleeps). /health?deep=1 runs SELECT 1 for when you do want to check the DB.
+  app.get('/health', asyncHandler(async (req, res) => {
+    const body = {
+      status:    'ok',
+      version:   '1.0.0',
+      uptime:    Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    };
+    if (req.query.deep !== '1') {
+      res.json(body);
+      return;
+    }
     try {
       const { db } = await import('./common/db/index');
       await db.execute(sql`SELECT 1`);
+      res.json({ ...body, db: 'connected' });
     } catch {
-      dbStatus = 'disconnected';
+      res.status(503).json({ ...body, status: 'degraded', db: 'disconnected' });
     }
-    res.json({
-      status: 'ok',
-      version: '1.0.0',
-      uptime: Math.round(process.uptime()),
-      timestamp: new Date().toISOString(),
-      db: dbStatus,
-    });
   }));
 
   // Sentry error handler — must be registered before custom errorHandler
