@@ -106,7 +106,6 @@ export function averageDropoffRate(rows: DropoffRow[]): number {
  * Four-stage completion funnel: Views → Started → 50% Complete → Submitted.
  */
 export async function computeResponseCompletionFunnel(formId: string): Promise<FunnelStage[]> {
-  // Utilizing Postgres CTEs and SQL Window Functions for adaptive time-series bucketing.
   const [form] = await db
     .select({ viewCount: forms.viewCount, responseCount: forms.responseCount })
     .from(forms)
