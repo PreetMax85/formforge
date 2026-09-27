@@ -152,6 +152,16 @@ export default function BuilderPage() {
     },
   });
 
+  /* ── Unsaved-changes guard ──────────────────────────────────── */
+  // Closing the tab or reloading with unsaved fields shows the browser's
+  // "Leave site?" prompt. In-app links are guarded in Menubar.
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
+
   /* ── DnD sensors ─────────────────────────────────────────────── */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -435,6 +445,7 @@ export default function BuilderPage() {
               onPlay={handlePlay}
               onPublish={() => setPublishModalOpen(true)}
               isPublishing={publishMutation.isPending}
+              hasUnsavedChanges={isDirty}
             />
           }
           hierarchy={
