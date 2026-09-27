@@ -340,7 +340,7 @@ interface InsightCardsProps {
   insights: FormInsight[];
 }
 
-const INSIGHT_ICONS: Record<string, React.ElementType> = {
+const INSIGHT_ICONS: Record<FormInsight['icon'], React.ElementType> = {
   'trending-up':   TrendingUp,
   'trending-down': TrendingDown,
   'alert-circle':  AlertCircle,
@@ -360,14 +360,14 @@ const INSIGHT_COLORS: Record<FormInsight['type'], { border: string; icon: string
  */
 export function InsightCards({ insights }: InsightCardsProps) {
   return (
-    <Panel title="AI Insights" icon={Zap}>
+    <Panel title="Insights" icon={Zap}>
       {insights.length === 0 ? (
         <ChartEmpty message="Collect more responses to unlock insights." />
       ) : (
         <div className="flex flex-col gap-3">
           {insights.map((insight, i) => {
             const colors = INSIGHT_COLORS[insight.type];
-            const Icon   = INSIGHT_ICONS[insight.icon] ?? Info;
+            const Icon   = INSIGHT_ICONS[insight.icon];
             return (
               <div
                 key={i}

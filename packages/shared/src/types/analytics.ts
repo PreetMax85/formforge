@@ -17,9 +17,18 @@ export interface FunnelStage {
   conversionRate: number;
 }
 
+/** Icon keys the dashboard knows how to draw (see INSIGHT_ICONS). */
+export type FormInsightIcon =
+  | 'trending-up'
+  | 'trending-down'
+  | 'alert-circle'
+  | 'zap'
+  | 'activity'
+  | 'info';
+
 export interface FormInsight {
   type:    'positive' | 'warning' | 'neutral';
-  icon:    string;
+  icon:    FormInsightIcon;
   message: string;
 }
 

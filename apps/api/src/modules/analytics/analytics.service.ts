@@ -175,13 +175,9 @@ export function generateFormInsightsSummary(stats: FormAnalyticsStats): FormInsi
   const insights: FormInsight[] = [];
   const score = computeFormHealthScore(stats);
 
-  if (score === null) {
-    return [{
-      type:    'neutral',
-      icon:    'bar-chart-2',
-      message: 'Not enough data to calculate form health. Share your form to start collecting responses.',
-    }];
-  }
+  // Too little data to say anything. The Insights panel shows its own empty
+  // state; the health panel already explains the missing score.
+  if (score === null) return [];
 
   if (stats.recentResponses > stats.previousResponses * 2) {
     insights.push({
@@ -236,7 +232,7 @@ export function generateFormInsightsSummary(stats: FormAnalyticsStats): FormInsi
   } else {
     insights.push({
       type:    'neutral',
-      icon:    'bar-chart-2',
+      icon:    'info',
       message: `Form health score: ${score}/100. Room for improvement in completion rate.`,
     });
   }

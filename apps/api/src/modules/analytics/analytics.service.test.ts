@@ -87,6 +87,20 @@ describe('averageDropoffRate', () => {
 });
 
 describe('generateFormInsightsSummary with sparse data', () => {
+  it('returns no insights when there is not enough data for a health score', () => {
+    const insights = generateFormInsightsSummary({
+      completionRate:           0,
+      recentResponses:          0,
+      previousResponses:        0,
+      avgDropoffRate:           0,
+      avgFieldsAnswered:        0,
+      totalFields:              3,
+      totalUnconditionalFields: 3,
+      totalResponses:           0,
+    });
+    expect(insights).toEqual([]);
+  });
+
   it('never names a field without retention data as the worst drop-off', () => {
     const insights = generateFormInsightsSummary({
       ...realisticStats,
