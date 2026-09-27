@@ -1,6 +1,6 @@
 # FormForge
 
-A production-grade form builder for creators who care about craft.
+A form builder for creators who care about craft.
 Build dynamic forms, publish with custom themes, and collect responses — all
 through a Game Engine Inspector interface.
 
@@ -10,9 +10,8 @@ through a Game Engine Inspector interface.
 
 | | |
 |---|---|
-| Frontend | https://formforge.jdevs.codes |
-| API | https://api.formforge.jdevs.codes |
-| API Docs | https://api.formforge.jdevs.codes/docs |
+| App | https://formforge.jdevs.codes |
+| Public API docs | https://formforge.jdevs.codes/docs |
 | Explore | https://formforge.jdevs.codes/explore |
 
 ---
@@ -76,7 +75,7 @@ different visual theme from the theme engine.
 | Animation | framer-motion |
 | Drag & Drop | @dnd-kit |
 | Charts | Recharts |
-| Email | Resend, React Email |
+| Email | Resend |
 | Logging | pino |
 | Monitoring | Sentry |
 | API Docs | Scalar |
@@ -109,10 +108,12 @@ formforge/
 │   ├── shared/       ← Zod schemas, types, ApiError, constants, conditional-logic utils
 │   ├── db/           ← Drizzle schema, migrations, seed script
 │   ├── trpc/         ← AppRouter type export + client factory
-│   ├── email/        ← React Email templates (ResponseReceived, ResponseCopy)
-│   └── ui/           ← Shared UI primitives
+│   ├── email/        ← Resend helpers for notification emails (plain text)
+│   └── ui/           ← (empty)
 │
-├── Dockerfile        ← Railway deployment
+├── vercel.json       ← Vercel deployment: web + API as two services, one origin
+├── scripts/boot-smoke-test.sh ← starts the real API; CI fails if it can't
+├── Dockerfile        ← container build (not used by the Vercel deployment)
 ├── .github/workflows/ci.yml
 └── turbo.json
 ```
@@ -141,6 +142,7 @@ pnpm --filter @repo/db db:seed      # seed demo data (idempotent)
 
 ```bash
 pnpm turbo run test
+scripts/boot-smoke-test.sh   # boots the API; needs the env vars from .env
 ```
 
 ---
@@ -148,28 +150,35 @@ pnpm turbo run test
 ## API Documentation
 
 Interactive OpenAPI docs powered by Scalar at
-[http://localhost:8080/docs](http://localhost:8080/docs).
+[formforge.jdevs.codes/docs](https://formforge.jdevs.codes/docs) (locally,
+[http://localhost:8080/docs](http://localhost:8080/docs)).
 
-The spec is generated from the same tRPC/Zod sources that power validation,
-with OpenAPI metadata added where endpoints are exposed.
+Only the public endpoints are exposed over REST at `/api/v1` and documented:
+fetch a published form, record a view, list public forms, and submit a response.
+The app itself talks to the API over tRPC at `/trpc`. The spec is generated from
+the same tRPC/Zod sources that power validation.
 
 ---
 
 ## Deployment
 
-| Service | Platform | URL |
-|---|---|---|
-| Frontend | Vercel | formforge.jdevs.codes |
-| Backend | Railway (Dockerfile) | api.formforge.jdevs.codes |
-| Database | Neon | Serverless PostgreSQL |
+One Vercel project serves both apps from one origin using
+[Vercel Services](https://vercel.com/docs/services) (`vercel.json`): Next.js
+at `/`, and the Express API on `/trpc`, `/api/v1`, `/docs`, `/openapi.json` and
+`/health`. Serving both from one origin keeps the refresh-token cookie
+first-party. Functions run in `sin1`, next to the Neon database in Singapore.
 
-**Vercel env vars:**
-- `NEXT_PUBLIC_API_URL` — deployed API origin
+| Service | Platform |
+|---|---|
+| Web + API | Vercel (Hobby), region `sin1` |
+| Database | Neon (Free), `aws-ap-southeast-1` |
 
-**Railway env vars:**
-- `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
-- `APP_URL`, `COOKIE_DOMAIN`
-- `RESEND_API_KEY`, `TURNSTILE_ENABLED`
+**Vercel env vars:** `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`,
+`APP_URL`; optionally `RESEND_API_KEY`, `SENTRY_DSN`, `TURNSTILE_ENABLED` and
+`TURNSTILE_SECRET_KEY`. Leave `NODE_ENV` unset: Vercel sets it at runtime, and
+setting it in the project also applies it to the build, where pnpm then skips
+devDependencies. Leave `NEXT_PUBLIC_API_URL` unset too, so the browser calls the
+same origin.
 
 See `.env.example` for the full list.
 
