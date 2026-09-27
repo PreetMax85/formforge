@@ -493,7 +493,7 @@ export default function DashboardPage() {
             }}
           >
             {forms.length === 0
-              ? "Scene is empty. Press [+ New Form] to instantiate your first GameObject."
+              ? "No forms yet. Click New Form to create your first one."
               : `${forms.length} form${forms.length === 1 ? "" : "s"} in your scene.`}
           </p>
         </div>
@@ -576,11 +576,11 @@ export default function DashboardPage() {
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: "13px",
-              color: "#4b5563",
+              color: "var(--text-secondary)",
               marginBottom: "16px",
             }}
           >
-            Scene is empty. No GameObjects found.
+            No forms yet.
           </p>
           <Button
             onClick={() =>
@@ -592,7 +592,7 @@ export default function DashboardPage() {
             className="bg-[#569cd6] text-[#0e0e0e] hover:bg-[#4a8bc2] font-medium rounded-none"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Instantiate Form
+            New Form
           </Button>
         </div>
       )}

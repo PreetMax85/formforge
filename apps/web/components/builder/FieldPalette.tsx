@@ -122,7 +122,7 @@ export function FieldPalette({ onAdd }: FieldPaletteProps) {
           textTransform: 'uppercase',
         }}
       >
-        Component Palette
+        Fields
       </div>
       <div>
         {FIELD_TYPES.map((type) => (

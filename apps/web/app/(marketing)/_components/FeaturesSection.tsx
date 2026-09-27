@@ -17,7 +17,7 @@ const FEATURES: Feature[] = [
     icon:        Layers,
     color:       '#569cd6',
     title:       'Inspector-Driven Builder',
-    description: 'Every field is a GameObject. Drag it onto the canvas, click it, configure it in the Inspector panel. No modal popups. No context switching.',
+    description: 'Click a field type to add it, or drag it onto the canvas, then configure it in the Inspector panel. No modal popups. No context switching.',
   },
   {
     icon:        GitBranch,
