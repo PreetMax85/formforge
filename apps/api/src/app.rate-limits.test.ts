@@ -38,6 +38,13 @@ const login = () =>
     body:    '{}',
   }).then((r) => r.status);
 
+describe('global rate limit', () => {
+  it('allows 200 requests per window, since every dashboard page load costs several', async () => {
+    const res = await fetch(`${baseUrl}/health`);
+    expect(res.headers.get('ratelimit-limit')).toBe('200');
+  });
+});
+
 describe('auth rate limits', () => {
   it('lets refresh, which every dashboard page load calls, run 60 times per window', async () => {
     const statuses = [];

@@ -284,7 +284,7 @@ if (form.passwordHash && !(await bcrypt.compare(input.password ?? '', form.passw
 The rate limiters must use these exact export names:
 
 ```typescript
-export const globalLimiter        // Applied to ALL routes via app.use()
+export const globalLimiter        // Applied to ALL routes via app.use() (200/15min)
 export const apiWriteLimiter      // Applied to login and signup (30/15min)
 export const refreshLimiter       // Applied to token refresh only (60/15min)
 export const submissionLimiter    // Applied to public form submission (5/15min)
@@ -705,6 +705,7 @@ apps/api/src/app.test.ts
   - /health is database-free; /health?deep=1 checks the database
 
 apps/api/src/app.rate-limits.test.ts  (own file: fresh limiter counts)
+  - global allows 200 requests per window (RateLimit-Limit header)
   - refresh allows 60 requests per window, then answers 429
   - login keeps its own budget, unspent by refreshes
 
