@@ -4,8 +4,6 @@ This file defines coding standards, architectural rules, and naming conventions
 for AI coding assistants working on this codebase. All rules apply to every
 generated file without exception. Read this file completely before writing code.
 
-Full architecture reference: `ARCHITECTURE.md`
-
 ---
 
 ## 1. Stack
@@ -284,7 +282,7 @@ if (form.passwordHash && !(await bcrypt.compare(input.password ?? '', form.passw
 The rate limiters must use these exact export names:
 
 ```typescript
-export const globalLimiter        // Applied to ALL routes via app.use()
+export const globalLimiter        // Applied to ALL routes via app.use() (200/15min)
 export const apiWriteLimiter      // Applied to login and signup (30/15min)
 export const refreshLimiter       // Applied to token refresh only (60/15min)
 export const submissionLimiter    // Applied to public form submission (5/15min)
@@ -705,6 +703,7 @@ apps/api/src/app.test.ts
   - /health is database-free; /health?deep=1 checks the database
 
 apps/api/src/app.rate-limits.test.ts  (own file: fresh limiter counts)
+  - global allows 200 requests per window (RateLimit-Limit header)
   - refresh allows 60 requests per window, then answers 429
   - login keeps its own budget, unspent by refreshes
 
@@ -783,9 +782,9 @@ docs: rewrite AGENTS.md to match current codebase
 
 ## 22. Conflict Resolution Rule
 
-If you notice a difference between ARCHITECTURE.md, this file, or the actual
-code — in variable names, function signatures, or patterns — always pick the
-option that follows these priorities in order:
+If you notice a difference between this file and the actual code — in variable
+names, function signatures, or patterns — always pick the option that follows
+these priorities in order:
 
 1. Most type-safe (explicit types win over inferred)
 2. Most readable (descriptive names win over short names)
