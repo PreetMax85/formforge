@@ -3,7 +3,7 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Layers } from 'lucide-react';
+import { ArrowLeft, Layers } from 'lucide-react';
 import { FieldCard } from './FieldCard';
 import type { Field } from '~/lib/types/field';
 
@@ -60,21 +60,23 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
             <p
               style={{
                 fontSize: '13px',
-                color: '#4b5563',
+                color: 'var(--text-secondary)',
                 fontFamily: "'JetBrains Mono', monospace",
-                marginBottom: '4px',
+                marginBottom: '8px',
               }}
             >
               Scene is empty.
             </p>
             <p
+              className="flex items-center gap-2"
               style={{
-                fontSize: '11px',
-                color: '#374151',
+                fontSize: '13px',
+                color: 'var(--text-primary)',
                 fontFamily: "'JetBrains Mono', monospace",
               }}
             >
-              Drag a component from the palette.
+              <ArrowLeft size={14} aria-hidden style={{ color: '#569cd6', flexShrink: 0 }} />
+              Click a field type on the left to add it, or drag it here.
             </p>
           </div>
         ) : (

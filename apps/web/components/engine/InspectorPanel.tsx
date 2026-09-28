@@ -46,7 +46,7 @@ export function InspectorPanel({ field, allFields, onUpdate, onDelete }: Inspect
             <p
               style={{
                 fontSize: '11px',
-                color: '#4b5563',
+                color: 'var(--text-secondary)',
                 fontFamily: "'JetBrains Mono', monospace",
                 lineHeight: 1.6,
               }}
@@ -55,8 +55,8 @@ export function InspectorPanel({ field, allFields, onUpdate, onDelete }: Inspect
             </p>
             <p
               style={{
-                fontSize: '10px',
-                color: '#374151',
+                fontSize: '11px',
+                color: 'var(--text-secondary)',
                 fontFamily: "'JetBrains Mono', monospace",
                 marginTop: '4px',
               }}

@@ -10,9 +10,9 @@ through a Game Engine Inspector interface.
 
 ## Features
 
-- **Drag-and-drop form builder** with 10 implemented field types
-  (short text, long text, email, number, single select, multi-select, checkbox,
-  rating, date, dropdown)
+- **Form builder** — click a field type (or drag it onto the canvas) and
+  configure it in an inspector panel; 10 field types (short text, long text,
+  email, number, single select, multi-select, checkbox, rating, date, dropdown)
 - **8 visual themes** with full CSS variable injection and animated canvas
   backgrounds
 - **Conditional logic** — show/hide fields based on previous answers (server-side

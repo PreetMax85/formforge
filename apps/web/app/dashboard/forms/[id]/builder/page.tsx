@@ -152,9 +152,46 @@ export default function BuilderPage() {
     },
   });
 
+  /* ── Unsaved-changes guard ──────────────────────────────────── */
+  // Closing the tab or reloading with unsaved fields shows the browser's
+  // "Leave site?" prompt. In-app links are guarded in Menubar.
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
+
   /* ── DnD sensors ─────────────────────────────────────────────── */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
+
+  /* ── Add field ───────────────────────────────────────────────── */
+  // Clicking a palette row and dropping it on the canvas both land here, and
+  // both append: the drop position is not used.
+  const addField = useCallback(
+    (type: FieldType) => {
+      const label = defaultLabel(type);
+      const newField: Field = {
+        id: tempId(),
+        formId,
+        type,
+        label,
+        placeholder: null,
+        description: null,
+        required: false,
+        order: 0,
+        config: defaultConfig(type),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setFields((prev) => [...prev, { ...newField, order: prev.length }]);
+      setActiveFieldId(newField.id);
+      setIsDirty(true);
+      pushLog('info', `Asset "${label}" added to scene (unsaved)`);
+    },
+    [formId]
   );
 
   /* ── DnD handlers ────────────────────────────────────────────── */
@@ -168,25 +205,7 @@ export default function BuilderPage() {
 
       // New field dropped from palette onto canvas
       if (activeId.startsWith('palette-') && overId === DROPPABLE_ID) {
-        const type = active.data.current?.type as FieldType;
-        const label = defaultLabel(type);
-        const newField: Field = {
-          id: tempId(),
-          formId,
-          type,
-          label,
-          placeholder: null,
-          description: null,
-          required: false,
-          order: 0,
-          config: defaultConfig(type),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setFields((prev) => [...prev, { ...newField, order: prev.length }]);
-        setActiveFieldId(newField.id);
-        setIsDirty(true);
-        pushLog('info', `Asset "${label}" added to scene (unsaved)`);
+        addField(active.data.current?.type as FieldType);
         return;
       }
 
@@ -201,7 +220,7 @@ export default function BuilderPage() {
         setIsDirty(true);
       }
     },
-    [formId]
+    [addField]
   );
 
   const handleDragOver = useCallback((_event: DragOverEvent) => {
@@ -329,6 +348,18 @@ export default function BuilderPage() {
   }
 
   /* ── Publish ─────────────────────────────────────────────────── */
+  // Publishing uses the last saved fields, so unsaved work would silently
+  // be left out of the live form. Ask for a save first, as PLAY does.
+  function handlePublish() {
+    if (isDirty) {
+      toast('Save your changes first before publishing.', {
+        action: { label: 'Save', onClick: handleSave },
+      });
+      return;
+    }
+    setPublishModalOpen(true);
+  }
+
   function handlePublishConfirm(visibility: 'public' | 'unlisted') {
     publishMutation.mutate({ id: formId, visibility });
   }
@@ -424,8 +455,9 @@ export default function BuilderPage() {
               formTitle={form.title}
               formId={formId}
               onPlay={handlePlay}
-              onPublish={() => setPublishModalOpen(true)}
+              onPublish={handlePublish}
               isPublishing={publishMutation.isPending}
+              hasUnsavedChanges={isDirty}
             />
           }
           hierarchy={
@@ -437,7 +469,7 @@ export default function BuilderPage() {
                   onSelect={setActiveFieldId}
                 />
               </div>
-              <FieldPalette />
+              <FieldPalette onAdd={addField} />
             </div>
           }
           scene={

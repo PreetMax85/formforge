@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import { Play, Zap, ChevronRight, BarChart2 } from 'lucide-react';
 
 interface MenubarProps {
@@ -9,6 +10,7 @@ interface MenubarProps {
   onPlay: () => void;
   onPublish: () => void;
   isPublishing: boolean;
+  hasUnsavedChanges?: boolean;
 }
 
 /**
@@ -16,10 +18,19 @@ interface MenubarProps {
  * Breadcrumb: FormForge › [formTitle] › Builder
  * Buttons: ▶ PLAY  ⚡ PUBLISH
  */
-export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing }: MenubarProps) {
+export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing, hasUnsavedChanges = false }: MenubarProps) {
+  // Client-side navigation does not fire `beforeunload`, so the menubar's
+  // links ask for themselves before leaving unsaved work.
+  function confirmLeave(e: MouseEvent<HTMLAnchorElement>) {
+    if (hasUnsavedChanges && !window.confirm('You have unsaved changes. Leave without saving?')) {
+      e.preventDefault();
+    }
+  }
+
   const titleNode = formId ? (
     <Link
       href={`/dashboard/forms/${formId}`}
+      onClick={confirmLeave}
       className="truncate max-w-[180px] hover:underline"
       style={{ color: '#9ca3af', textDecorationColor: '#569cd6' }}
       title={formTitle}
@@ -45,6 +56,7 @@ export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing }: 
       <div className="flex items-center gap-1 min-w-0" style={{ fontSize: '12px' }}>
         <Link
           href="/dashboard"
+          onClick={confirmLeave}
           className="hover:underline"
           style={{ color: '#569cd6', fontWeight: 600, letterSpacing: '0.04em', textDecorationColor: '#569cd6' }}
         >
@@ -88,6 +100,7 @@ export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing }: 
         {formId && (
           <Link
             href={`/dashboard/forms/${formId}`}
+            onClick={confirmLeave}
             className="flex items-center gap-1.5 px-3 h-6 text-xs transition-colors"
             style={{
               background: 'transparent',

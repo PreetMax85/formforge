@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Star, Calendar, Mail, Hash, CheckSquare, ChevronDown, AlignLeft, AlignJustify, List } from 'lucide-react';
@@ -45,6 +45,20 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
     isDragging,
   } = useSortable({ id: field.id });
 
+  // Keep the selected card in view. A field added from the palette is
+  // appended and selected, so on a long form this scrolls to it.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      cardRef.current = node;
+      setNodeRef(node);
+    },
+    [setNodeRef]
+  );
+  useEffect(() => {
+    if (isActive) cardRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [isActive]);
+
   const meta = FIELD_TYPE_META[field.type];
   const Icon = meta.icon;
   const hasConditions = !!(
@@ -63,7 +77,7 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
 
   return (
     <motion.div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: isDragging ? 0.4 : 1, x: 0 }}
@@ -95,7 +109,7 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
           {...listeners}
           className="flex-none cursor-grab active:cursor-grabbing p-0.5"
           onClick={(e) => e.stopPropagation()}
-          style={{ color: '#3c3c3c' }}
+          style={{ color: 'var(--text-secondary)' }}
         >
           <GripVertical size={14} />
         </div>
