@@ -4,8 +4,6 @@ This file defines coding standards, architectural rules, and naming conventions
 for AI coding assistants working on this codebase. All rules apply to every
 generated file without exception. Read this file completely before writing code.
 
-Full architecture reference: `ARCHITECTURE.md`
-
 ---
 
 ## 1. Stack
@@ -784,9 +782,9 @@ docs: rewrite AGENTS.md to match current codebase
 
 ## 22. Conflict Resolution Rule
 
-If you notice a difference between ARCHITECTURE.md, this file, or the actual
-code — in variable names, function signatures, or patterns — always pick the
-option that follows these priorities in order:
+If you notice a difference between this file and the actual code — in variable
+names, function signatures, or patterns — always pick the option that follows
+these priorities in order:
 
 1. Most type-safe (explicit types win over inferred)
 2. Most readable (descriptive names win over short names)
