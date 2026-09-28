@@ -22,6 +22,87 @@ import QRCodeModal from '~/components/shared/QRCodeModal';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 
+/* ── No responses yet ────────────────────────────────────────────── */
+/**
+ * Replaces every analytics panel while a form has no responses: one clear
+ * next step instead of stat tiles at zero and a page of empty charts.
+ * Keyed on responses rather than status, because an unpublished form goes
+ * back to draft but keeps the responses it collected.
+ */
+function NoResponsesYet({
+  isPublished,
+  viewCount,
+  builderHref,
+  onCopyLink,
+  copied,
+}: {
+  isPublished: boolean;
+  viewCount:   number;
+  builderHref: string;
+  onCopyLink:  () => void;
+  copied:      boolean;
+}) {
+  const actionStyle: React.CSSProperties = {
+    fontFamily:     "'JetBrains Mono', monospace",
+    fontSize:       '11px',
+    fontWeight:     700,
+    color:          '#0e0e0e',
+    background:     '#569cd6',
+    border:         'none',
+    padding:        '8px 16px',
+    textDecoration: 'none',
+    cursor:         'pointer',
+  };
+
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{
+        background: '#141414',
+        border:     '1px solid #2a2a2a',
+        padding:    '64px 24px',
+        gap:        '12px',
+      }}
+    >
+      <BarChart2 size={28} style={{ color: '#569cd6' }} />
+      <h2
+        style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize:   '18px',
+          fontWeight: 600,
+          color:      'var(--text-primary)',
+        }}
+      >
+        No responses yet
+      </h2>
+      <p
+        style={{
+          fontSize:   '13px',
+          color:      'var(--text-secondary)',
+          maxWidth:   '440px',
+          lineHeight: 1.6,
+        }}
+      >
+        {isPublished
+          ? `Your form is live${viewCount > 0 ? ` and has been opened ${viewCount.toLocaleString()} time${viewCount === 1 ? '' : 's'}` : ''}. Share the link to start collecting responses; charts appear here after the first one.`
+          : 'This form is a draft. Publish it from the builder and share the link; charts appear here after the first response.'}
+      </p>
+      <div style={{ marginTop: '8px' }}>
+        {isPublished ? (
+          <button onClick={onCopyLink} className="flex items-center gap-1.5" style={actionStyle}>
+            {copied ? <CheckCircle size={12} /> : <Copy size={12} />}
+            {copied ? 'Copied!' : 'Copy link'}
+          </button>
+        ) : (
+          <Link href={builderHref} style={actionStyle}>
+            Open Builder
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Loading skeleton ─────────────────────────────────────────────── */
 function Skeleton({ h = 200 }: { h?: number }) {
   return (
@@ -317,6 +398,16 @@ export default function FormOverviewPage({
         </div>
       </div>
 
+      {form.responseCount === 0 ? (
+        <NoResponsesYet
+          isPublished={form.status === 'published'}
+          viewCount={form.viewCount}
+          builderHref={`/dashboard/forms/${formId}/builder`}
+          onCopyLink={copyLink}
+          copied={copied}
+        />
+      ) : (
+        <>
       {/* ── Stat pills ─────────────────────────────────────────── */}
       <div
         className="grid grid-cols-2 lg:grid-cols-4"
@@ -427,6 +518,8 @@ export default function FormOverviewPage({
         <Skeleton h={320} />
       ) : (
         <OptionBreakdownChart data={breakdownQuery.data?.data ?? []} />
+      )}
+        </>
       )}
         </div>
 

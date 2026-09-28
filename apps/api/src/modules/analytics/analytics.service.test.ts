@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeFormHealthScore, generateFormInsightsSummary } from './analytics.service';
-import type { FormStats, FormAnalyticsStats } from '@repo/shared';
+import { averageDropoffRate, computeFormHealthScore, generateFormInsightsSummary } from './analytics.service';
+import type { DropoffRow, FormStats, FormAnalyticsStats } from '@repo/shared';
 
 const realisticStats: FormStats = {
   completionRate:           0.62,
@@ -55,5 +55,59 @@ describe('generateFormInsightsSummary', () => {
       expect(typeof insight.message).toBe('string');
       expect(insight.message.length).toBeGreaterThan(0);
     }
+  });
+});
+
+/** A drop-off row as the SQL returns it: Postgres numerics arrive as strings. */
+function dropoffRow(order: number, responseCount: number, retention: string | null): DropoffRow {
+  return {
+    field_id:       `field-${order}`,
+    field_label:    `Question ${order}`,
+    field_order:    order,
+    response_count: String(responseCount) as unknown as number,
+    retention_pct:  retention as unknown as number | null,
+  };
+}
+
+describe('averageDropoffRate', () => {
+  it('averages drop-off across fields after the first', () => {
+    const rows = [dropoffRow(1, 10, '100.00'), dropoffRow(2, 8, '80.00'), dropoffRow(3, 6, '75.00')];
+    expect(averageDropoffRate(rows)).toBeCloseTo((0.2 + 0.25) / 2);
+  });
+
+  it('skips fields with no retention data instead of counting them as 100% drop-off', () => {
+    const rows = [dropoffRow(1, 10, '100.00'), dropoffRow(2, 0, '0.00'), dropoffRow(3, 0, null)];
+    expect(averageDropoffRate(rows)).toBe(1);
+  });
+
+  it('is 0 when no field has retention data', () => {
+    const rows = [dropoffRow(1, 0, null), dropoffRow(2, 0, null)];
+    expect(averageDropoffRate(rows)).toBe(0);
+  });
+});
+
+describe('generateFormInsightsSummary with sparse data', () => {
+  it('returns no insights when there is not enough data for a health score', () => {
+    const insights = generateFormInsightsSummary({
+      completionRate:           0,
+      recentResponses:          0,
+      previousResponses:        0,
+      avgDropoffRate:           0,
+      avgFieldsAnswered:        0,
+      totalFields:              3,
+      totalUnconditionalFields: 3,
+      totalResponses:           0,
+    });
+    expect(insights).toEqual([]);
+  });
+
+  it('never names a field without retention data as the worst drop-off', () => {
+    const insights = generateFormInsightsSummary({
+      ...realisticStats,
+      totalResponses: 50,
+      fieldDropoffs:  [dropoffRow(1, 50, '100.00'), dropoffRow(2, 40, '80.00'), dropoffRow(3, 0, null)],
+    });
+    for (const insight of insights) expect(insight.message).not.toContain('null');
+    expect(insights.some((i) => i.message.includes('Question 3'))).toBe(false);
   });
 });

@@ -75,7 +75,7 @@ export async function calculateQ1toQnDropoff(formId: string): Promise<DropoffRow
       field_order,
       response_count,
       CASE
-        WHEN prev_count IS NULL THEN 100.0
+        WHEN prev_count IS NULL THEN CASE WHEN response_count > 0 THEN 100.0 END
         ELSE ROUND((response_count::numeric / NULLIF(prev_count, 0)) * 100, 2)
       END AS retention_pct
     FROM ranked
@@ -90,10 +90,22 @@ export async function calculateQ1toQnDropoff(formId: string): Promise<DropoffRow
 }
 
 /**
+ * Mean drop-off rate (0-1) across every field after the first. Fields with no
+ * retention data (NULL retention_pct) are skipped rather than counted as a
+ * 100% drop-off.
+ */
+export function averageDropoffRate(rows: DropoffRow[]): number {
+  const rates = rows
+    .slice(1)
+    .filter((row) => row.retention_pct !== null)
+    .map((row) => 1 - Number(row.retention_pct) / 100);
+  return rates.length > 0 ? rates.reduce((sum, rate) => sum + rate, 0) / rates.length : 0;
+}
+
+/**
  * Four-stage completion funnel: Views → Started → 50% Complete → Submitted.
  */
 export async function computeResponseCompletionFunnel(formId: string): Promise<FunnelStage[]> {
-  // Utilizing Postgres CTEs and SQL Window Functions for adaptive time-series bucketing.
   const [form] = await db
     .select({ viewCount: forms.viewCount, responseCount: forms.responseCount })
     .from(forms)
@@ -162,13 +174,9 @@ export function generateFormInsightsSummary(stats: FormAnalyticsStats): FormInsi
   const insights: FormInsight[] = [];
   const score = computeFormHealthScore(stats);
 
-  if (score === null) {
-    return [{
-      type:    'neutral',
-      icon:    'bar-chart-2',
-      message: 'Not enough data to calculate form health. Share your form to start collecting responses.',
-    }];
-  }
+  // Too little data to say anything. The Insights panel shows its own empty
+  // state; the health panel already explains the missing score.
+  if (score === null) return [];
 
   if (stats.recentResponses > stats.previousResponses * 2) {
     insights.push({
@@ -184,16 +192,18 @@ export function generateFormInsightsSummary(stats: FormAnalyticsStats): FormInsi
     });
   }
 
-  if (stats.fieldDropoffs && stats.fieldDropoffs.length > 0) {
-    const worstField = stats.fieldDropoffs.reduce(
-      (worst, f) => f.retention_pct < worst.retention_pct ? f : worst,
-      stats.fieldDropoffs[0]!
+  const measuredFields = (stats.fieldDropoffs ?? []).filter((f) => f.retention_pct !== null);
+  if (measuredFields.length > 0) {
+    const worstField = measuredFields.reduce(
+      (worst, f) => Number(f.retention_pct) < Number(worst.retention_pct) ? f : worst,
+      measuredFields[0]!
     );
-    if (worstField.retention_pct < 70) {
+    const worstRetention = Number(worstField.retention_pct);
+    if (worstRetention < 70) {
       insights.push({
         type:    'warning',
         icon:    'alert-circle',
-        message: `"${worstField.field_label}" sees the largest drop-off — only ${worstField.retention_pct}% of respondents continue past it. Consider making it optional.`,
+        message: `"${worstField.field_label}" sees the largest drop-off — only ${worstRetention}% of respondents continue past it. Consider making it optional.`,
       });
     }
   }
@@ -221,7 +231,7 @@ export function generateFormInsightsSummary(stats: FormAnalyticsStats): FormInsi
   } else {
     insights.push({
       type:    'neutral',
-      icon:    'bar-chart-2',
+      icon:    'info',
       message: `Form health score: ${score}/100. Room for improvement in completion rate.`,
     });
   }
@@ -361,11 +371,7 @@ export async function getFormStats(formId: string): Promise<FormAnalyticsStats> 
 
   const completionRate = viewCount > 0 ? Math.min(totalResponses / viewCount, 1) : 0;
   const fieldDropoffs  = await calculateQ1toQnDropoff(formId);
-  const avgDropoffRate =
-    fieldDropoffs.length > 1
-      ? fieldDropoffs.slice(1).reduce((sum, f) => sum + (1 - f.retention_pct / 100), 0) /
-        (fieldDropoffs.length - 1)
-      : 0;
+  const avgDropoffRate = averageDropoffRate(fieldDropoffs);
 
   return {
     totalResponses,

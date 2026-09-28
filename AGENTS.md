@@ -79,8 +79,9 @@ apps/api/src/
     analytics/
       analytics.service.ts            Contains 4 intelligence functions +
                                         detectSpamSubmissionCluster() +
-                                        getFieldOptionBreakdowns()
-      analytics.service.test.ts       3 Vitest tests
+                                        getFieldOptionBreakdowns() +
+                                        averageDropoffRate()
+      analytics.service.test.ts       8 Vitest tests
 
 packages/shared/src/
   index.ts                             Re-exports everything
@@ -92,8 +93,8 @@ packages/shared/src/
   schemas/schemas.test.ts             5 Vitest boundary-value tests
   types/index.ts                      z.infer<> exports + analytics types
   types/analytics.ts                  FormStats, FormAnalyticsStats, FormInsight,
-                                        FunnelStage, DropoffRow, OptionBreakdown —
-                                        defined ONLY here
+                                        FormInsightIcon, FunnelStage, DropoffRow,
+                                        OptionBreakdown — defined ONLY here
   errors/ApiError.ts                  Shared between frontend and backend
   constants/index.ts                  FIELD_TYPES, THEMES, HTTP_STATUS, THEME_META
   utils/
@@ -164,8 +165,8 @@ Every rule here applies to every file generated. No exceptions.
 - TypeScript strict mode. Every type must be explicit.
 - Named exports only. Exception: React components use default export.
 - JSDoc comment on every exported function.
-- Analytics types (FormStats, FormAnalyticsStats, FormInsight, FunnelStage,
-  DropoffRow, OptionBreakdown) are defined ONLY in `packages/shared/src/types/analytics.ts`.
+- Analytics types (FormStats, FormAnalyticsStats, FormInsight, FormInsightIcon,
+  FunnelStage, DropoffRow, OptionBreakdown) are defined ONLY in `packages/shared/src/types/analytics.ts`.
   Import them from `@repo/shared` in both backend and frontend.
   Never redefine them locally.
 
@@ -706,6 +707,11 @@ apps/api/src/modules/analytics/analytics.service.test.ts
   - computeFormHealthScore returns integer between 0 and 100
   - computeFormHealthScore weights completion rate at 40%
   - generateFormInsightsSummary returns array of FormInsight objects
+  - averageDropoffRate averages drop-off across fields after the first
+  - averageDropoffRate skips fields with no retention data (NULL retention_pct)
+  - averageDropoffRate is 0 when no field has retention data
+  - generateFormInsightsSummary returns no insights without a health score
+  - generateFormInsightsSummary never names a field without retention data
 
 packages/shared/src/schemas/schemas.test.ts
   - SubmitResponseSchema accepts honeypot value (silent pass-through)
