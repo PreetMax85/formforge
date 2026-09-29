@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   DndContext,
@@ -70,10 +71,36 @@ function defaultLabel(type: FieldType): string {
 function FullscreenMessage({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="flex items-center justify-center w-full h-screen"
+      className="flex flex-col items-center justify-center gap-4 w-full h-screen"
       style={{ background: '#1e1e1e', color: '#9ca3af', fontFamily: "'JetBrains Mono', monospace", fontSize: '13px' }}
     >
       {children}
+    </div>
+  );
+}
+
+const messageActionStyle: React.CSSProperties = {
+  padding: '6px 16px',
+  background: '#252526',
+  border: '1px solid #3c3c3c',
+  color: '#d4d4d4',
+  fontSize: '12px',
+  fontFamily: "'JetBrains Mono', monospace",
+  cursor: 'pointer',
+};
+
+/** Ways out of an error screen: try the request again, or leave. */
+function MessageActions({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <div className="flex gap-2">
+      {onRetry && (
+        <button type="button" onClick={onRetry} style={messageActionStyle}>
+          Retry
+        </button>
+      )}
+      <Link href="/dashboard" style={messageActionStyle}>
+        Back to forms
+      </Link>
     </div>
   );
 }
@@ -89,6 +116,7 @@ export default function BuilderPage() {
     data: response,
     isLoading,
     error,
+    refetch,
   } = trpc.forms.byId.useQuery({ id: formId });
 
   const form = response?.data;
@@ -386,8 +414,11 @@ export default function BuilderPage() {
   const activeField = fields.find((f) => f.id === activeFieldId) ?? null;
 
   /* ── 4-state async pattern ───────────────────────────────────── */
+  // isLoading must be checked first: checking !form first showed "not
+  // found" for the whole delay window before the loading screen appears.
   const showLoading = useDelayedLoading(isLoading);
-  if (showLoading) {
+  if (isLoading) {
+    if (!showLoading) return null;
     return <LoadingScreen variant="fullscreen" />;
   }
 
@@ -397,12 +428,18 @@ export default function BuilderPage() {
         <span style={{ color: '#ef4444' }}>
           [ERROR] {error.message}
         </span>
+        <MessageActions onRetry={() => void refetch()} />
       </FullscreenMessage>
     );
   }
 
   if (!form) {
-    return <FullscreenMessage>Form not found in scene.</FullscreenMessage>;
+    return (
+      <FullscreenMessage>
+        Form not found.
+        <MessageActions />
+      </FullscreenMessage>
+    );
   }
 
   /* ── Preview mode ───────────────────────────────────────────── */
