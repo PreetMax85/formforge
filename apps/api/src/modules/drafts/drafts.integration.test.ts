@@ -9,6 +9,7 @@ run('drafts service (Neon branch)', async () => {
   const { db, closeDb } = await import('../../common/db/index');
   const { users, forms, fields, formDrafts, responses, responseAnswers } = await import('@repo/db/schema');
   const { getDraft, saveDraft, discardDraft, publishDraft } = await import('./drafts.service');
+  const { createForm, cloneForm, getFormsByCreator } = await import('../forms/forms.service');
 
   const userId = randomUUID();
   const formId = randomUUID();
@@ -154,5 +155,30 @@ run('drafts service (Neon branch)', async () => {
     await saveDraft(otherFormId, od.revision, { ...od.content, fields: [{ ...q(9), id: foreign!.id }] }, userId);
     await expect(publishDraft(otherFormId, 'unlisted', userId)).rejects.toMatchObject({ statusCode: 400 });
     expect(d.revision).toBeGreaterThan(0);
+  });
+
+  it('creates the draft row together with the form', async () => {
+    const created = await createForm({ title: 'Fresh', theme: 'default' }, userId);
+    const d = await getDraft(created.id, userId);
+    expect(d.content.title).toBe('Fresh');
+    expect(d.revision).toBe(1);
+  });
+
+  it('clones the draft with new question ids and remapped rules', async () => {
+    const d = await getDraft(formId, userId);
+    const cloned = await cloneForm(formId, userId);
+    const cd = await getDraft(cloned.id, userId);
+    expect(cd.content.fields).toHaveLength(d.content.fields.length);
+    expect(cd.content.fields.map((f) => f.id)).not.toContain(d.content.fields[0]!.id);
+    expect(cd.publishedRevision).toBeNull();
+  });
+
+  it('lists forms with the draft title and unpublished flag', async () => {
+    const d = await getDraft(formId, userId);
+    await saveDraft(formId, d.revision, { ...d.content, title: 'Working title' }, userId);
+    const list = await getFormsByCreator(userId);
+    const row = list.find((f) => f.id === formId);
+    expect(row?.draftTitle).toBe('Working title');
+    expect(row?.hasUnpublishedChanges).toBe(true);
   });
 });

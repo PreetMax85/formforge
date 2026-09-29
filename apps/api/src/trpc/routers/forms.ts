@@ -160,7 +160,7 @@ const formsRouter = router({
     }),
 
   update: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'PUT', path: '/forms/{id}', tags: ['Forms'], description: 'Update form settings (title, slug, theme, visibility, limits, etc.).' } })
+    .meta({ openapi: { enabled: false, method: 'PUT', path: '/forms/{id}', tags: ['Forms'], description: 'Update operational settings (slug, visibility, limits, notifications).' } })
     .input(UpdateFormSchema)
     .mutation(async ({ input, ctx }) => {
       const { id, ...rest } = input;
@@ -193,7 +193,7 @@ const formsRouter = router({
     }),
 
   clone: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/clone', tags: ['Forms'], description: 'Deep-clone a form into a new draft. Copies all fields and conditional-logic rules with remapped IDs.' } })
+    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/clone', tags: ['Forms'], description: 'Clone the working draft of a form into a new, never-published form. Questions and conditional-logic rules get new IDs.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       const cloned = await cloneForm(input.id, ctx.user.sub);
