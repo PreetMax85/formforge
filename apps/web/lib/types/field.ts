@@ -13,7 +13,7 @@ type FieldConfig = Partial<{
   maxSelections: number;
 }>;
 
-export type Field = Omit<DbField, 'config' | 'conditions' | 'createdAt' | 'updatedAt'> & {
+export type Field = Omit<DbField, 'config' | 'conditions' | 'createdAt' | 'updatedAt' | 'retiredAt'> & {
   config: FieldConfig;
   conditions?: z.infer<typeof ConditionalLogicSchema> | null;
   createdAt: string;
