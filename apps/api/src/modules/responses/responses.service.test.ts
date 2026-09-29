@@ -1,5 +1,43 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { responseAnswers } from '@repo/db/schema';
 import { validateResponseAnswers, submitResponse, answerLabel } from './responses.service';
+
+const dbMock = vi.hoisted(() => ({
+  findFirst: vi.fn(),
+  answerInserts: [] as unknown[][],
+  responsesTable: { current: undefined as unknown },
+}));
+
+vi.mock('../../common/db/index', () => ({
+  db: {
+    query: { forms: { findFirst: dbMock.findFirst } },
+    transaction: async (run: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        insert: (table: unknown) => ({
+          values: (rows: unknown) => {
+            if (table === responseAnswers) {
+              dbMock.answerInserts.push(rows as unknown[]);
+              return Promise.resolve();
+            }
+            return { onConflictDoNothing: () => ({ returning: async () => [{ id: 'response-1' }] }) };
+          },
+        }),
+        update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ responseCount: 1 }] }) }) }),
+        delete: () => ({ where: async () => undefined }),
+      };
+      return run(tx);
+    },
+  },
+}));
+
+vi.mock('../analytics/analytics.service', () => ({
+  detectSpamSubmissionCluster: vi.fn(async () => ({ isSpam: false, confidence: 0 })),
+}));
+
+vi.mock('@repo/email', () => ({
+  sendResponseReceived: vi.fn(async () => undefined),
+  sendResponseCopy: vi.fn(async () => undefined),
+}));
 
 const numberField = {
   id:       'f-number',
@@ -85,5 +123,48 @@ describe('answerLabel', () => {
   });
   it('marks a removed question', () => {
     expect(answerLabel('Age', new Date())).toBe('Removed question: Age');
+  });
+});
+
+describe('submitResponse answers to removed questions', () => {
+  const liveField = {
+    id: 'f-live', type: 'short_text', required: false, config: {}, label: 'Name',
+    conditions: null, order: 0,
+  };
+  const publishedForm = {
+    id: 'form-1', slug: 'form', title: 'Form', status: 'published', expiresAt: null,
+    requireEmail: false, allowAnonymous: true, passwordHash: null, notifyCreator: false,
+    fields: [liveField], creator: { email: 'owner@example.com' },
+  };
+
+  beforeEach(() => {
+    dbMock.answerInserts.length = 0;
+    dbMock.findFirst.mockReset();
+    dbMock.findFirst.mockResolvedValue(publishedForm);
+  });
+
+  it('stores live answers and drops one that is not a live question of the form', async () => {
+    const result = await submitResponse({
+      formSlug: 'form',
+      answers: [
+        { fieldId: 'f-live', value: 'Preet' },
+        { fieldId: 'f-removed', value: 'stale answer' },
+      ],
+      sendEmailCopy: false,
+    });
+    expect(result.success).toBe(true);
+    expect(dbMock.answerInserts).toEqual([
+      [{ responseId: 'response-1', fieldId: 'f-live', value: 'Preet' }],
+    ]);
+  });
+
+  it('skips the answers insert when nothing live remains', async () => {
+    const result = await submitResponse({
+      formSlug: 'form',
+      answers: [{ fieldId: 'f-removed', value: 'stale answer' }],
+      sendEmailCopy: false,
+    });
+    expect(result.success).toBe(true);
+    expect(dbMock.answerInserts).toEqual([]);
   });
 });

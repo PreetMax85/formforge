@@ -133,6 +133,7 @@ export async function computeResponseCompletionFunnel(formId: string): Promise<F
         SELECT r.id
         FROM responses r
         JOIN response_answers ra ON ra.response_id = r.id
+        JOIN fields f ON f.id = ra.field_id AND f.retired_at IS NULL
         WHERE r.form_id = ${formId}
         GROUP BY r.id
         HAVING COUNT(ra.id) > ${halfwayThreshold}
@@ -361,6 +362,7 @@ export async function getFormStats(formId: string): Promise<FormAnalyticsStats> 
         SELECT response_id, COUNT(*) AS answer_count
         FROM response_answers ra
         JOIN responses r ON r.id = ra.response_id
+        JOIN fields f ON f.id = ra.field_id AND f.retired_at IS NULL
         WHERE r.form_id = ${formId}
         GROUP BY response_id
       ) subq
