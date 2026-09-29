@@ -3,3 +3,4 @@ export * from './forms.schemas';
 export * from './fields.schemas';
 export * from './responses.schemas';
 export * from './analytics.schemas';
+export * from './drafts.schemas';
