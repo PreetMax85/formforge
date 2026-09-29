@@ -35,8 +35,10 @@ export function createFormStore(formSlug: string, mode: 'preview' | 'live' = 'li
         prevStep:       ()        => set(s => ({ currentStep: Math.max(0, s.currentStep - 1), direction: 'backward' })),
         setCurrentStep: (step)    => set({ currentStep: step }),
         setSubmitting:  (v)       => set({ isSubmitting: v }),
-        setSubmitted:   ()        => set({ isSubmitted: true }),
-        reset:          ()        => set({ currentStep: 0, answers: {}, isSubmitted: false }),
+        // Submitting ends when submitted; leaving it true left the next
+        // response stuck on "Submitting..." after "Submit another response".
+        setSubmitted:   ()        => set({ isSubmitted: true, isSubmitting: false }),
+        reset:          ()        => set({ currentStep: 0, direction: 'forward', answers: {}, isSubmitting: false, isSubmitted: false }),
       }),
       {
         name:       storageKey,
