@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateResponseAnswers, submitResponse } from './responses.service';
+import { validateResponseAnswers, submitResponse, answerLabel } from './responses.service';
 
 const numberField = {
   id:       'f-number',
@@ -76,5 +76,14 @@ describe('submitResponse honeypot', () => {
       _hp:           'bot-filled-this',
     });
     expect(result).toEqual({ success: true, message: 'Response submitted successfully.' });
+  });
+});
+
+describe('answerLabel', () => {
+  it('keeps the label of a live question', () => {
+    expect(answerLabel('Age', null)).toBe('Age');
+  });
+  it('marks a removed question', () => {
+    expect(answerLabel('Age', new Date())).toBe('Removed question: Age');
   });
 });

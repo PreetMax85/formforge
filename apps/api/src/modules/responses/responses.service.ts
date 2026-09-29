@@ -12,6 +12,11 @@ import { sendResponseReceived, sendResponseCopy } from '@repo/email';
 // Re-export for backward compatibility — tests import from this module
 export { validateResponseAnswers } from '@repo/shared';
 
+/** How an answer's question is named in the responses view and CSV export. */
+export function answerLabel(label: string, retiredAt: Date | null): string {
+  return retiredAt ? `Removed question: ${label}` : label;
+}
+
 interface SubmitResponseInput {
   formSlug:        string;
   answers:         { fieldId: string; value: string | string[] }[];
@@ -44,7 +49,7 @@ export async function submitResponse(input: SubmitResponseInput) {
   const form = await db.query.forms.findFirst({
     where: eq(forms.slug, input.formSlug),
     with: {
-      fields:  { orderBy: (f, { asc }) => [asc(f.order)] },
+      fields:  { where: (f, { isNull: isNullFn }) => isNullFn(f.retiredAt), orderBy: (f, { asc }) => [asc(f.order)] },
       creator: { columns: { email: true } },
     },
   });
@@ -267,10 +272,10 @@ export async function listResponses(
   const fieldLabels = new Map<string, string>();
   if (fieldIds.length > 0) {
     const fieldRows = await db
-      .select({ id: fields.id, label: fields.label })
+      .select({ id: fields.id, label: fields.label, retiredAt: fields.retiredAt })
       .from(fields)
       .where(inArray(fields.id, fieldIds));
-    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+    for (const f of fieldRows) fieldLabels.set(f.id, answerLabel(f.label, f.retiredAt));
   }
 
   const answersByResponseId = new Map<string, typeof responseAnswers.$inferSelect[]>();
@@ -313,10 +318,10 @@ export async function getResponseById(responseId: string, requesterId: string) {
   const fieldLabels = new Map<string, string>();
   if (fieldIds.length > 0) {
     const fieldRows = await db
-      .select({ id: fields.id, label: fields.label })
+      .select({ id: fields.id, label: fields.label, retiredAt: fields.retiredAt })
       .from(fields)
       .where(inArray(fields.id, fieldIds));
-    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+    for (const f of fieldRows) fieldLabels.set(f.id, answerLabel(f.label, f.retiredAt));
   }
 
   return {

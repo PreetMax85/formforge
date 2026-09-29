@@ -1,4 +1,4 @@
-import { eq, sql, count, and, gte, lt, inArray } from 'drizzle-orm';
+import { eq, sql, count, and, gte, lt, inArray, isNull } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { logger } from '../../common/logger';
 import { forms, fields, responses, responseAnswers } from '@repo/db/schema';
@@ -61,6 +61,7 @@ export async function calculateQ1toQnDropoff(formId: string): Promise<DropoffRow
       LEFT JOIN response_answers ra ON ra.field_id = f.id
       LEFT JOIN responses r         ON r.id = ra.response_id
       WHERE f.form_id = ${formId}
+        AND f.retired_at IS NULL
         AND f.conditions IS NULL
       GROUP BY f.id, f.label, f."order"
     ),
@@ -118,6 +119,7 @@ export async function computeResponseCompletionFunnel(formId: string): Promise<F
       SELECT COUNT(*)::int AS cnt
       FROM fields
       WHERE form_id = ${formId}
+        AND retired_at IS NULL
         AND conditions IS NULL
     `);
     const totalFields = Number(
@@ -337,11 +339,12 @@ export async function getFormStats(formId: string): Promise<FormAnalyticsStats> 
     db
       .select({ count: count() })
       .from(fields)
-      .where(eq(fields.formId, formId)),
+      .where(and(eq(fields.formId, formId), isNull(fields.retiredAt))),
     db.execute(sql`
       SELECT COUNT(*)::int AS cnt
       FROM fields
       WHERE form_id = ${formId}
+        AND retired_at IS NULL
         AND conditions IS NULL
     `),
   ]);
@@ -452,7 +455,7 @@ export async function getFieldOptionBreakdowns(formId: string): Promise<OptionBr
       config: fields.config,
     })
     .from(fields)
-    .where(and(eq(fields.formId, formId), inArray(fields.type, [...eligibleTypes])))
+    .where(and(eq(fields.formId, formId), isNull(fields.retiredAt), inArray(fields.type, [...eligibleTypes])))
     .orderBy(fields.order);
 
   if (formFields.length === 0) return [];

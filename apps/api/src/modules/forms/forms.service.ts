@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { db } from '../../common/db/index';
 import { forms, fields } from '@repo/db/schema';
-import { eq, desc, sql, and, lt, or, like, asc } from 'drizzle-orm';
+import { eq, desc, sql, and, lt, or, like, asc, isNull } from 'drizzle-orm';
 import { ApiError } from '@repo/shared';
 import type { z } from 'zod';
 import type { CreateFormSchema, UpdateFormSchema } from '@repo/shared';
@@ -89,7 +89,7 @@ export async function getFormById(id: string, requesterId?: string) {
   const formFields = await db
     .select()
     .from(fields)
-    .where(eq(fields.formId, id))
+    .where(and(eq(fields.formId, id), isNull(fields.retiredAt)))
     .orderBy(asc(fields.order));
   return { ...form, fields: formFields };
 }
@@ -108,7 +108,7 @@ export async function getFormBySlug(slug: string) {
   const formFields = await db
     .select()
     .from(fields)
-    .where(eq(fields.formId, form.id))
+    .where(and(eq(fields.formId, form.id), isNull(fields.retiredAt)))
     .orderBy(asc(fields.order));
 
   return { ...form, fields: formFields };

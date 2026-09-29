@@ -9,12 +9,12 @@ import {
   updateForm,
   deleteForm,
   archiveForm,
-  publishForm,
   unpublishForm,
   cloneForm,
   exploreForms,
   incrementViewCount,
 } from '../../modules/forms/forms.service';
+import { publishDraft } from '../../modules/drafts/drafts.service';
 
 // Explicit output envelope to avoid z.any()
 const successEnvelope = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -177,10 +177,10 @@ const formsRouter = router({
     }),
 
   publish: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/publish', tags: ['Forms'], description: 'Publish a form with public or unlisted visibility.' } })
+    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/publish', tags: ['Forms'], description: 'Publish the form\'s draft with public or unlisted visibility.' } })
     .input(PublishFormSchema)
     .mutation(async ({ input, ctx }) => {
-      const form = await publishForm(input.id, input.visibility, ctx.user.sub);
+      const form = await publishDraft(input.id, input.visibility, ctx.user.sub);
       return { success: true as const, message: 'Form published', data: form };
     }),
 
