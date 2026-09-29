@@ -29,6 +29,10 @@ export interface UseDraft {
   reload(): void;
 }
 
+type TrpcClient = ReturnType<typeof trpc.useUtils>['client'];
+/** The draft as drafts.get returns it (updatedAt is a string at runtime: no transformer). */
+type DraftView = Awaited<ReturnType<TrpcClient['drafts']['get']['query']>>['data'];
+
 /**
  * Saves still finishing for a page that unmounted (builder to settings, say),
  * keyed by form id. The next useDraft for that form waits for them before it
@@ -39,6 +43,8 @@ const settling = new Map<string, Promise<void>>();
 
 const SETTLE_TIMEOUT_MS = 10_000;
 
+type LoadedDraft = { formId: string; draft: DraftView };
+
 /** Statuses in which edits exist that the server does not have yet. */
 const UNSAVED_STATUSES: ReadonlySet<SaveStatus> = new Set(['unsaved', 'saving', 'offline', 'error']);
 
@@ -48,17 +54,21 @@ const UNSAVED_STATUSES: ReadonlySet<SaveStatus> = new Set(['unsaved', 'saving', 
  * and the settings page.
  */
 export function useDraft(formId: string): UseDraft {
-  // When this page may fetch (Date.now()), or null while a previous page's
-  // last save is still settling. Decided in an effect, not during render: a
-  // page that is being left runs its unmount cleanup (which fills `settling`)
-  // only after this page's first render, but before this page's effects.
-  const [readySince, setReadySince] = useState<number | null>(null);
-  // refetchOnMount 'always': never adopt a copy another page loaded
-  // (staleTime is Infinity app-wide); gcTime 0: do not keep one around.
-  const query = trpc.drafts.get.useQuery(
-    { formId },
-    { enabled: readySince !== null, refetchOnMount: 'always', gcTime: 0 },
-  );
+  // The draft is loaded directly, not through the React Query cache: a cached
+  // copy (staleTime is Infinity app-wide) could predate the previous page's
+  // last save, and cache refetches (reconnect, focus) would restart the
+  // controller and drop pending edits. Each accepted load is a new object.
+  // Held in a ref so a new utils object can never re-run the load effect
+  // (that would reload and restart the controller, dropping pending edits).
+  const client = trpc.useUtils().client;
+  const clientRef = useRef(client);
+  useEffect(() => { clientRef.current = client; }, [client]);
+  const [loaded, setLoaded] = useState<LoadedDraft | null>(null);
+  const [loadError, setLoadError] = useState<{ formId: string; message: string } | null>(null);
+  // Bumped by every load and by cleanup, so a late response is ignored.
+  const loadSeqRef = useRef(0);
+  // True once the wait effect decided this page may load (no save settling).
+  const readyRef = useRef(false);
   const discardMutation = trpc.drafts.discard.useMutation();
   const publishMutation = trpc.forms.publish.useMutation();
 
@@ -73,29 +83,49 @@ export function useDraft(formId: string): UseDraft {
   const controllerRef = useRef<DraftSaveController<DraftContent> | null>(null);
   const contentRef = useRef<DraftContent | null>(null);
 
-  const dataUpdatedAt = query.dataUpdatedAt;
-  // Only a fetch that completed after this page became ready counts; anything
-  // older in the cache predates the previous page's last save.
-  const data = readySince !== null && dataUpdatedAt >= readySince ? query.data?.data : undefined;
+  const data = loaded?.formId === formId ? loaded.draft : undefined;
+  const error = loadError?.formId === formId ? loadError.message : null;
 
-  // Wait for a save left over from a page that just unmounted.
-  useEffect(() => {
-    let live = true;
-    const markReady = (): void => { if (live) setReadySince(Date.now()); };
-    const pending = settling.get(formId);
-    if (!pending) {
-      markReady();
-      return () => { live = false; };
-    }
-    // A hung request must not keep this page loading forever: after
-    // SETTLE_TIMEOUT_MS load anyway (at worst the first save conflicts).
-    const timer = setTimeout(markReady, SETTLE_TIMEOUT_MS);
-    void pending.then(markReady);
-    return () => { live = false; clearTimeout(timer); };
+  const load = useCallback((): void => {
+    const seq = ++loadSeqRef.current;
+    setLoadError(null);
+    clientRef.current.drafts.get.query({ formId }).then(
+      (res) => {
+        if (seq === loadSeqRef.current) setLoaded({ formId, draft: res.data });
+      },
+      (err: unknown) => {
+        if (seq !== loadSeqRef.current) return;
+        setLoadError({ formId, message: err instanceof Error ? err.message : "Couldn't load this form." });
+      },
+    );
   }, [formId]);
 
-  // (Re)start from the server copy whenever a fresh one arrives. Keyed on
-  // dataUpdatedAt too, so reload() restarts even if the data is unchanged.
+  // Decide here, not during render, when this page may load: a page being
+  // left runs its unmount cleanup (which fills `settling`) after this page's
+  // first render but before this page's effects. Then wait for that save.
+  useEffect(() => {
+    let live = true;
+    const start = (): void => {
+      if (!live) return;
+      readyRef.current = true;
+      load();
+    };
+    const pending = settling.get(formId);
+    // A hung request must not keep this page loading forever: after
+    // SETTLE_TIMEOUT_MS load anyway (at worst the first save conflicts).
+    const timer = pending ? setTimeout(start, SETTLE_TIMEOUT_MS) : null;
+    if (pending) void pending.then(start);
+    else start();
+    return () => {
+      live = false;
+      readyRef.current = false;
+      if (timer) clearTimeout(timer);
+      loadSeqRef.current += 1; // unmount or new formId: ignore what is in flight
+    };
+  }, [formId, load]);
+
+  // (Re)start from the server copy on every accepted load (reload included:
+  // each load produces a new object).
   useEffect(() => {
     if (!data) return;
     controllerRef.current?.dispose();
@@ -129,7 +159,7 @@ export function useDraft(formId: string): UseDraft {
     setStatus('saved');
     setStatusMessage(null);
     setRestorable(readMirror(formId, data.revision));
-  }, [data, dataUpdatedAt, formId]);
+  }, [data, formId]);
 
   // Unmount: send what is pending, then stop. Not done on reload, where the
   // pending edits belong to a draft the fresh copy replaces.
@@ -239,12 +269,12 @@ export function useDraft(formId: string): UseDraft {
     clearMirror(formId);
   }, [discardAsync, formId]);
 
-  const { refetch } = query;
-  const reload = useCallback(() => { void refetch(); }, [refetch]);
+  // Before the wait effect has decided, the pending first load covers it.
+  const reload = useCallback(() => { if (readyRef.current) load(); }, [load]);
 
   return {
-    isLoading: !data && !query.error,
-    error: query.error?.message ?? null,
+    isLoading: !data && !error,
+    error,
     content,
     status,
     statusMessage,
