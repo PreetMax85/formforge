@@ -184,28 +184,6 @@ export async function deleteForm(id: string, requesterId: string) {
   await db.delete(forms).where(eq(forms.id, id));
 }
 
-export async function publishForm(id: string, visibility: 'public' | 'unlisted', requesterId: string) {
-  const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
-  if (!existing) throw ApiError.notFound('Form not found');
-  if (existing.creatorId !== requesterId) {
-    throw ApiError.forbidden('You do not have permission to publish this form');
-  }
-
-  const [updated] = await db
-    .update(forms)
-    .set({
-      status: 'published',
-      visibility,
-      publishedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(forms.id, id))
-    .returning();
-
-  if (!updated) throw ApiError.internal('Failed to publish form');
-  return updated;
-}
-
 export async function unpublishForm(id: string, requesterId: string) {
   const [existing] = await db.select().from(forms).where(eq(forms.id, id)).limit(1);
   if (!existing) throw ApiError.notFound('Form not found');

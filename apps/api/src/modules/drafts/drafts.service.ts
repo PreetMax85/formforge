@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '../../common/db/index';
 import { forms, fields, formDrafts } from '@repo/db/schema';
 import {
@@ -6,8 +6,10 @@ import {
   ConditionalLogicSchema,
   DraftContentSchema,
   FORM_THEMES,
+  findPublishProblems,
   type DraftContent,
 } from '@repo/shared';
+import { diffDraftAgainstPublished } from './publishDiff';
 
 export type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -183,5 +185,106 @@ export async function discardDraft(formId: string, baseRevision: number, request
       .returning();
     if (!updated) throw ApiError.conflict('This form was changed in another tab. Reload to see the latest version.');
     return toView(updated, form);
+  });
+}
+
+/**
+ * Pushes the draft live in one transaction: validates it, writes questions
+ * (insert / update / un-retire), retires removed ones, copies title, theme and
+ * thank-you text onto the form, and marks the draft as published.
+ */
+export async function publishDraft(
+  formId: string,
+  visibility: 'public' | 'unlisted',
+  requesterId: string,
+): Promise<typeof forms.$inferSelect> {
+  await loadOwnedForm(formId, requesterId);
+
+  return db.transaction(async (tx) => {
+    await getOrCreateDraft(tx, formId);
+    const [locked] = await tx
+      .select()
+      .from(formDrafts)
+      .where(eq(formDrafts.formId, formId))
+      .for('update');
+    if (!locked) throw ApiError.internal('Draft missing');
+
+    const content = DraftContentSchema.parse(locked.content);
+    const problems = findPublishProblems(content);
+    if (problems.length > 0) throw ApiError.badRequest(problems.join(' '));
+
+    const draftIds = content.fields.map((f) => f.id);
+    if (draftIds.length > 0) {
+      const foreign = await tx
+        .select({ id: fields.id })
+        .from(fields)
+        .where(and(inArray(fields.id, draftIds), ne(fields.formId, formId)))
+        .limit(1);
+      if (foreign.length > 0) throw ApiError.badRequest('A question in this draft belongs to another form.');
+    }
+
+    const published = await tx
+      .select({ id: fields.id, retiredAt: fields.retiredAt })
+      .from(fields)
+      .where(eq(fields.formId, formId));
+    const diff = diffDraftAgainstPublished(
+      content.fields,
+      published.map((p) => ({ id: p.id, retired: p.retiredAt !== null })),
+    );
+
+    // Park live questions at distinct negative orders so writing the final
+    // orders below can never collide on the unique (form_id, order) index.
+    await tx
+      .update(fields)
+      .set({ order: sql`-1 - ${fields.order}` })
+      .where(and(eq(fields.formId, formId), isNull(fields.retiredAt)));
+
+    const now = new Date();
+    if (diff.retire.length > 0) {
+      await tx.update(fields).set({ retiredAt: now, updatedAt: now }).where(inArray(fields.id, diff.retire));
+    }
+
+    const toRow = ({ field, order }: { field: DraftContent['fields'][number]; order: number }) => ({
+      type:        field.type,
+      label:       field.label,
+      placeholder: field.placeholder,
+      description: field.description,
+      required:    field.required,
+      order,
+      config:      field.config,
+      conditions:  field.conditions,
+      updatedAt:   now,
+    });
+
+    for (const item of [...diff.update, ...diff.unretire]) {
+      await tx.update(fields).set({ ...toRow(item), retiredAt: null }).where(eq(fields.id, item.field.id));
+    }
+    if (diff.insert.length > 0) {
+      await tx.insert(fields).values(diff.insert.map((item) => ({ id: item.field.id, formId, ...toRow(item) })));
+    }
+
+    const [updatedForm] = await tx
+      .update(forms)
+      .set({
+        title:           content.title,
+        description:     content.description,
+        theme:           content.theme,
+        thankYouTitle:   content.thankYouTitle,
+        thankYouMessage: content.thankYouMessage,
+        status:          'published',
+        visibility,
+        publishedAt:     now,
+        updatedAt:       now,
+      })
+      .where(eq(forms.id, formId))
+      .returning();
+    if (!updatedForm) throw ApiError.internal('Failed to publish form');
+
+    await tx
+      .update(formDrafts)
+      .set({ publishedRevision: locked.revision })
+      .where(eq(formDrafts.formId, formId));
+
+    return updatedForm;
   });
 }
