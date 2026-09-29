@@ -2,6 +2,7 @@ import {
   pgTable, pgEnum, uuid, varchar, text,
   boolean, integer, jsonb, timestamp, uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { forms } from './forms';
 
 export const fieldTypeEnum = pgEnum('field_type', [
@@ -22,8 +23,13 @@ export const fields = pgTable('fields', {
   order:       integer('order').notNull().default(0),
   config:      jsonb('config').notNull().default({}),
   conditions:  jsonb('conditions'),
+  // Set when a publish removes the question. Retired questions stay so their
+  // answers survive; they are hidden from the live form and analytics.
+  retiredAt:   timestamp('retired_at'),
   createdAt:   timestamp('created_at').notNull().defaultNow(),
   updatedAt:   timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
-  uniqueIndex('fields_form_id_order_idx').on(t.formId, t.order),
+  uniqueIndex('fields_form_id_order_idx')
+    .on(t.formId, t.order)
+    .where(sql`${t.retiredAt} IS NULL`),
 ]);

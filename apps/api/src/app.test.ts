@@ -58,6 +58,7 @@ const seededField = {
   required:    true,
   order:       0,
   config:      { options: ['Honor', 'Ghost'] },
+  retiredAt:   null,
   conditions:  { action: 'show', logicType: 'all', rules: [] },
   createdAt:   now,
   updatedAt:   now,

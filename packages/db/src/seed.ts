@@ -1,5 +1,5 @@
 import { db } from './index';
-import { users, forms, fields, responses, responseAnswers } from './schema/index';
+import { users, forms, formDrafts, fields, responses, responseAnswers } from './schema/index';
 import { inArray, sql } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 
@@ -108,6 +108,34 @@ async function seed() {
     await db.insert(fields).values(field).onConflictDoNothing();
   }
   console.log('[SEED] Fields seeded');
+
+  // Drafts mirror what is published, so the builder opens without unpublished changes.
+  const seededForms = [
+    { form: SAMURAI_FORM, title: 'The Samurai Oath', description: 'Which path do you walk — honor or survival?', fields: samuraiFields },
+    { form: JJK_FORM, title: 'Sorcerer Registration', description: 'Declare your cursed technique. Sign the binding vow.', fields: jjkFields },
+    { form: AUJLA_FORM, title: 'VIP Backstage Pass', description: 'One night. One stage. Which song hits different?', fields: aujlaFields },
+  ];
+  for (const s of seededForms) {
+    await db.insert(formDrafts).values({
+      formId: s.form.id,
+      content: {
+        title: s.title,
+        description: s.description,
+        theme: s.form.theme,
+        thankYouTitle: 'Thank you!',
+        thankYouMessage: 'Your response has been recorded.',
+        fields: [...s.fields]
+          .sort((a, b) => a.order - b.order)
+          .map((f) => ({
+            id: f.id, type: f.type, label: f.label, placeholder: null,
+            description: null, required: f.required, config: f.config, conditions: null,
+          })),
+      },
+      revision: 1,
+      publishedRevision: 1,
+    }).onConflictDoNothing();
+  }
+  console.log('[SEED] Drafts seeded');
 
   // ── Deterministic response data ──────────────────────────────
   const samuraiAnswers = {

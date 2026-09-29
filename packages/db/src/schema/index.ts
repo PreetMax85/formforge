@@ -5,6 +5,7 @@ import { sessions } from './sessions';
 import { tokenBlocklist } from './token-blocklist';
 import { forms } from './forms';
 import { fields } from './fields';
+import { formDrafts } from './form-drafts';
 import { responses } from './responses';
 import { responseAnswers } from './response-answers';
 
@@ -17,6 +18,11 @@ export const formsRelations = relations(forms, ({ one, many }) => ({
   creator:   one(users, { fields: [forms.creatorId], references: [users.id] }),
   fields:    many(fields),
   responses: many(responses),
+  draft:     one(formDrafts, { fields: [forms.id], references: [formDrafts.formId] }),
+}));
+
+export const formDraftsRelations = relations(formDrafts, ({ one }) => ({
+  form: one(forms, { fields: [formDrafts.formId], references: [forms.id] }),
 }));
 
 export const fieldsRelations = relations(fields, ({ one }) => ({
@@ -37,4 +43,4 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
-export { users, sessions, tokenBlocklist, forms, fields, responses, responseAnswers };
+export { users, sessions, tokenBlocklist, forms, formDrafts, fields, responses, responseAnswers };
