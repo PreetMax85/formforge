@@ -576,6 +576,7 @@ export default function BuilderPage() {
         isOpen={publishModalOpen}
         onClose={() => setPublishModalOpen(false)}
         onConfirm={handlePublishConfirm}
+        isPublishing={publishMutation.isPending}
       />
     </>
   );
