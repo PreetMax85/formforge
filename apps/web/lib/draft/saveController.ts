@@ -130,6 +130,7 @@ export class DraftSaveController<C> {
     if (epoch !== this.epoch) {
       // reset() ran while this save was in flight: its result describes a draft we no longer track.
       if (this.dirty) void this.run();
+      else this.settle();
       return;
     }
 
@@ -153,10 +154,13 @@ export class DraftSaveController<C> {
         break;
       case 'conflict':
         this.clearTimer();
+        this.firstUnsavedAt = null;
         this.setStatus('conflict', 'This form was changed in another tab.');
         break;
       case 'rejected':
         this.dirty = true;
+        // Restart the max-wait clock, or every later edit would save at once (0 ms debounce).
+        this.firstUnsavedAt = null;
         if (this.editSeq !== seqAtStart) {
           // Newer edits arrived during the failed save: they are the "next edit", so try again.
           this.setStatus('unsaved', null);

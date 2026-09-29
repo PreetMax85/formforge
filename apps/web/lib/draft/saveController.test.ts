@@ -194,4 +194,32 @@ describe('DraftSaveController', () => {
     await expect(done).resolves.toBe('saving');
     calls[0]!.resolve({ kind: 'saved', revision: 2 });
   });
+
+  it('flush after reset() resolves once the stale in-flight save finishes', async () => {
+    const { controller, calls } = setup();
+    controller.edit('x');
+    await vi.advanceTimersByTimeAsync(800);
+    controller.reset(7);
+    const done = controller.flush();
+    calls[0]!.resolve({ kind: 'saved', revision: 2 });
+    await expect(done).resolves.toBe('saved');
+    expect(controller.getRevision()).toBe(7);
+  });
+
+  it('keeps the 800 ms debounce after a rejected save, however long ago the first edit was', async () => {
+    const { controller, calls } = setup();
+    controller.edit('x');
+    await vi.advanceTimersByTimeAsync(800);
+    calls[0]!.resolve({ kind: 'rejected', message: 'bad' });
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(controller.getStatus()).toBe('error');
+    controller.edit('y');
+    await vi.advanceTimersByTimeAsync(100);
+    controller.edit('yz');
+    await vi.advanceTimersByTimeAsync(799);
+    expect(calls).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toEqual(expect.objectContaining({ content: 'yz' }));
+  });
 });
