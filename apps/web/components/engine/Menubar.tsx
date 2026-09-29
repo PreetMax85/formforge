@@ -11,6 +11,7 @@ interface MenubarProps {
   onPublish: () => void;
   isPublishing: boolean;
   hasUnsavedChanges?: boolean;
+  publishLabel?: string;
 }
 
 /**
@@ -18,7 +19,7 @@ interface MenubarProps {
  * Breadcrumb: FormForge › [formTitle] › Builder
  * Buttons: ▶ PLAY  ⚡ PUBLISH
  */
-export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing, hasUnsavedChanges = false }: MenubarProps) {
+export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing, hasUnsavedChanges = false, publishLabel = 'PUBLISH' }: MenubarProps) {
   // Client-side navigation does not fire `beforeunload`, so the menubar's
   // links ask for themselves before leaving unsaved work.
   function confirmLeave(e: MouseEvent<HTMLAnchorElement>) {
@@ -143,7 +144,7 @@ export function Menubar({ formTitle, formId, onPlay, onPublish, isPublishing, ha
           }}
         >
           <Zap size={10} />
-          {isPublishing ? 'PUBLISHING...' : 'PUBLISH'}
+          {isPublishing ? 'PUBLISHING...' : publishLabel}
         </button>
       </div>
     </div>

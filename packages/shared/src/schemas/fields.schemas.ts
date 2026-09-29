@@ -28,16 +28,6 @@ export const FieldConfigSchema = z.discriminatedUnion('type', [
     options: z.array(z.string()).min(1) }),
 ]);
 
-export const ReorderFieldsSchema = z.object({
-  formId: z.string().uuid(),
-  fields: z.array(z.object({
-    // Accepts both real UUIDs (persisted fields) and client-side temp IDs
-    // like `temp-1712000000-abc`. Service silently no-ops on unknown IDs.
-    id:    z.string().min(1),
-    order: z.number().int().min(0),
-  })).min(1).max(50),
-});
-
 export const ConditionRuleSchema = z.object({
   sourceFieldId: z.string().uuid(),
   operator:      z.enum([
@@ -52,22 +42,4 @@ export const ConditionalLogicSchema = z.object({
   action: z.enum(['show', 'hide']),
   match:  z.enum(['any', 'all']),
   rules:  z.array(ConditionRuleSchema).min(1).max(10),
-});
-
-export const UpsertFieldSchema = z.object({
-  id:          z.string().uuid().optional(),
-  formId:      z.string().uuid(),
-  type:        FieldTypeEnum,
-  label:       z.string().min(1).max(500),
-  placeholder: z.string().max(500).optional(),
-  description: z.string().max(1000).optional(),
-  required:    z.boolean().default(false),
-  order:       z.number().int().min(0),
-  config:      z.record(z.string(), z.unknown()).default({}),
-  conditions:  ConditionalLogicSchema.optional(),
-});
-
-export const UpsertFieldsSchema = z.object({
-  formId: z.string().uuid(),
-  fields: z.array(UpsertFieldSchema).max(50),
 });
