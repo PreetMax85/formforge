@@ -105,24 +105,34 @@ export function useDraft(formId: string): UseDraft {
   // first render but before this page's effects. Then wait for that save.
   useEffect(() => {
     let live = true;
+    let started = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // Runs at most once per effect run: whichever of the settled save and the
+    // timeout comes first loads, and cancels the other.
     const start = (): void => {
-      if (!live) return;
+      if (!live || started) return;
+      started = true;
+      if (timer) clearTimeout(timer);
+      timer = null;
       readyRef.current = true;
       load();
     };
     const pending = settling.get(formId);
     // A hung request must not keep this page loading forever: after
     // SETTLE_TIMEOUT_MS load anyway (at worst the first save conflicts).
-    const timer = pending ? setTimeout(start, SETTLE_TIMEOUT_MS) : null;
-    if (pending) void pending.then(start);
-    else start();
+    if (pending) {
+      timer = setTimeout(start, SETTLE_TIMEOUT_MS);
+      void pending.then(start);
+    } else {
+      start();
+    }
     return () => {
       live = false;
       readyRef.current = false;
       if (timer) clearTimeout(timer);
       loadSeqRef.current += 1; // unmount or new formId: ignore what is in flight
     };
-  }, [formId, load]);
+  }, [formId, load]); // load changes only with formId, so this runs once per form
 
   // (Re)start from the server copy on every accepted load (reload included:
   // each load produces a new object).
