@@ -48,10 +48,17 @@ const UNSAVED_STATUSES: ReadonlySet<SaveStatus> = new Set(['unsaved', 'saving', 
  * and the settings page.
  */
 export function useDraft(formId: string): UseDraft {
-  const [ready, setReady] = useState(() => !settling.has(formId));
-  // gcTime 0: the next page to use this draft fetches it fresh instead of
-  // starting from the copy this page loaded (staleTime is Infinity app-wide).
-  const query = trpc.drafts.get.useQuery({ formId }, { enabled: ready, gcTime: 0 });
+  // When this page may fetch (Date.now()), or null while a previous page's
+  // last save is still settling. Decided in an effect, not during render: a
+  // page that is being left runs its unmount cleanup (which fills `settling`)
+  // only after this page's first render, but before this page's effects.
+  const [readySince, setReadySince] = useState<number | null>(null);
+  // refetchOnMount 'always': never adopt a copy another page loaded
+  // (staleTime is Infinity app-wide); gcTime 0: do not keep one around.
+  const query = trpc.drafts.get.useQuery(
+    { formId },
+    { enabled: readySince !== null, refetchOnMount: 'always', gcTime: 0 },
+  );
   const discardMutation = trpc.drafts.discard.useMutation();
   const publishMutation = trpc.forms.publish.useMutation();
 
@@ -66,24 +73,26 @@ export function useDraft(formId: string): UseDraft {
   const controllerRef = useRef<DraftSaveController<DraftContent> | null>(null);
   const contentRef = useRef<DraftContent | null>(null);
 
-  const data = query.data?.data;
   const dataUpdatedAt = query.dataUpdatedAt;
+  // Only a fetch that completed after this page became ready counts; anything
+  // older in the cache predates the previous page's last save.
+  const data = readySince !== null && dataUpdatedAt >= readySince ? query.data?.data : undefined;
 
   // Wait for a save left over from a page that just unmounted.
   useEffect(() => {
-    if (ready) return;
     let live = true;
+    const markReady = (): void => { if (live) setReadySince(Date.now()); };
     const pending = settling.get(formId);
     if (!pending) {
-      setReady(true);
-      return;
+      markReady();
+      return () => { live = false; };
     }
     // A hung request must not keep this page loading forever: after
     // SETTLE_TIMEOUT_MS load anyway (at worst the first save conflicts).
-    const timer = setTimeout(() => { if (live) setReady(true); }, SETTLE_TIMEOUT_MS);
-    void pending.then(() => { if (live) setReady(true); });
+    const timer = setTimeout(markReady, SETTLE_TIMEOUT_MS);
+    void pending.then(markReady);
     return () => { live = false; clearTimeout(timer); };
-  }, [formId, ready]);
+  }, [formId]);
 
   // (Re)start from the server copy whenever a fresh one arrives. Keyed on
   // dataUpdatedAt too, so reload() restarts even if the data is unchanged.
@@ -234,7 +243,7 @@ export function useDraft(formId: string): UseDraft {
   const reload = useCallback(() => { void refetch(); }, [refetch]);
 
   return {
-    isLoading: !ready || query.isLoading,
+    isLoading: !data && !query.error,
     error: query.error?.message ?? null,
     content,
     status,

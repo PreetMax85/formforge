@@ -52,7 +52,9 @@ export async function saveDraftRequest(
       if (res.status === 401) return { kind: 'rejected', message: SIGNED_OUT };
     }
     if (res.status === 409) return { kind: 'conflict' };
-    if (res.status >= 500) return { kind: 'network' };
+    // 429 (rate limited) is transient like a 5xx: back off and retry. Its
+    // body is { success: false, error: string }, not a tRPC error shape.
+    if (res.status === 429 || res.status >= 500) return { kind: 'network' };
     const payload = (await res.json()) as {
       result?: { data?: { data?: { revision?: number } } };
       error?: { message?: string };

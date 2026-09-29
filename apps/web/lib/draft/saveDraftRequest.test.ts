@@ -44,6 +44,12 @@ describe('saveDraftRequest', () => {
       .resolves.toEqual({ kind: 'network' });
   });
 
+  it('maps a rate-limited 429 to network so the controller backs off and retries', async () => {
+    const fetchImpl = vi.fn(async () => json(429, { success: false, error: 'Too many requests, please try again later.' }));
+    await expect(saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true }))
+      .resolves.toEqual({ kind: 'network' });
+  });
+
   it('maps 400 to rejected with the server message', async () => {
     const fetchImpl = vi.fn(async () => json(400, { error: { message: 'Invalid draft' } }));
     await expect(saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true }))
