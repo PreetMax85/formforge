@@ -155,6 +155,10 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
 
   /* ── Navigation ─────────────────────────────────────────────── */
   function handleNext() {
+    // Read the store directly, not this render's snapshot: two quick Enter
+    // presses can both run before React re-renders with isSubmitting=true.
+    const { isSubmitting: submitting, isSubmitted: submitted } = useFormStore.getState();
+    if (submitting || submitted) return;
     if (!validateCurrentField()) return;
     if (isLastStep) {
       handleSubmit();
@@ -171,11 +175,15 @@ export function FormRenderer({ formConfig, mode }: FormRendererProps) {
   /* Keep ref in sync so the keydown listener always calls latest handleNext */
   handleNextRef.current = handleNext;
 
+  // This listener stays mounted while the thank-you screen shows, so
+  // handleNext itself must refuse to run once the form is submitted.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== 'Enter') return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === 'textarea' || tag === 'button') return;
+      // Leave Enter alone where it already means something: new lines,
+      // pressing a button or link, opening a select.
+      if (tag === 'textarea' || tag === 'button' || tag === 'a' || tag === 'select') return;
       e.preventDefault();
       handleNextRef.current();
     }

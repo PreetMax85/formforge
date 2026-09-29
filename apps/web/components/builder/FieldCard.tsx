@@ -68,115 +68,119 @@ export const FieldCard = React.memo(function FieldCard({ field, isActive, onSele
     ((field.conditions as Record<string, unknown>).rules as unknown[]).length > 0
   );
 
+  // dnd-kit moves the card through `transform`. It sits on a plain div
+  // because framer-motion writes its own transform on a motion.div, which
+  // overwrote this one and kept cards still while being dragged.
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+    position: 'relative',
     zIndex: isDragging ? 50 : undefined,
   };
 
   return (
-    <motion.div
-      ref={setRefs}
-      style={style}
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: isDragging ? 0.4 : 1, x: 0 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
-    >
-      <div
-        onClick={() => onSelect(field.id)}
-        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors w-full"
-        style={{
-          background: isActive ? '#094771' : '#252526',
-          borderLeft: `3px solid ${meta.color}`,
-          borderBottom: '1px solid #2a2a2a',
-          outline: isActive ? `1px solid ${meta.color}40` : 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (!isActive) {
-            (e.currentTarget as HTMLDivElement).style.background = '#2d2d30';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isActive) {
-            (e.currentTarget as HTMLDivElement).style.background = '#252526';
-          }
-        }}
+    <div ref={setRefs} style={style}>
+      <motion.div
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
       >
-        {/* Drag handle */}
         <div
-          {...attributes}
-          {...listeners}
-          className="flex-none cursor-grab active:cursor-grabbing p-0.5"
-          onClick={(e) => e.stopPropagation()}
-          style={{ color: 'var(--text-secondary)' }}
+          onClick={() => onSelect(field.id)}
+          className="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors w-full"
+          style={{
+            background: isActive ? '#094771' : '#252526',
+            borderLeft: `3px solid ${meta.color}`,
+            borderBottom: '1px solid #2a2a2a',
+            outline: isActive ? `1px solid ${meta.color}40` : 'none',
+          }}
+          onMouseEnter={(e) => {
+            if (!isActive) {
+              (e.currentTarget as HTMLDivElement).style.background = '#2d2d30';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isActive) {
+              (e.currentTarget as HTMLDivElement).style.background = '#252526';
+            }
+          }}
         >
-          <GripVertical size={14} />
+          {/* Drag handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex-none cursor-grab active:cursor-grabbing p-0.5"
+            onClick={(e) => e.stopPropagation()}
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <GripVertical size={14} />
+          </div>
+
+          {/* Type icon */}
+          <Icon size={14} style={{ color: meta.color, flexShrink: 0 }} />
+
+          {/* Label + type badge */}
+          <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+            <span
+              className="truncate"
+              style={{
+                fontSize: '13px',
+                color: isActive ? '#d4d4d4' : '#c0c0c0',
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 500,
+              }}
+            >
+              {field.label || 'Untitled field'}
+            </span>
+            <span
+              style={{
+                fontSize: '10px',
+                color: meta.color,
+                fontFamily: "'JetBrains Mono', monospace",
+                letterSpacing: '0.04em',
+                opacity: 0.8,
+              }}
+            >
+              {meta.label}
+            </span>
+          </div>
+
+          {/* Conditional logic badge */}
+          {hasConditions && (
+            <span
+              style={{
+                fontSize: '9px',
+                color: '#c586c0',
+                fontFamily: "'JetBrains Mono', monospace",
+                background: 'rgba(197,134,192,0.12)',
+                padding: '1px 5px',
+                flexShrink: 0,
+                letterSpacing: '0.04em',
+              }}
+            >
+              IF
+            </span>
+          )}
+
+          {/* Required badge */}
+          {field.required && (
+            <span
+              style={{
+                fontSize: '9px',
+                color: '#ef4444',
+                fontFamily: "'JetBrains Mono', monospace",
+                background: 'rgba(239,68,68,0.12)',
+                padding: '1px 5px',
+                flexShrink: 0,
+                letterSpacing: '0.04em',
+              }}
+            >
+              REQ
+            </span>
+          )}
         </div>
-
-        {/* Type icon */}
-        <Icon size={14} style={{ color: meta.color, flexShrink: 0 }} />
-
-        {/* Label + type badge */}
-        <div className="flex flex-col flex-1 min-w-0 gap-0.5">
-          <span
-            className="truncate"
-            style={{
-              fontSize: '13px',
-              color: isActive ? '#d4d4d4' : '#c0c0c0',
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 500,
-            }}
-          >
-            {field.label || 'Untitled field'}
-          </span>
-          <span
-            style={{
-              fontSize: '10px',
-              color: meta.color,
-              fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: '0.04em',
-              opacity: 0.8,
-            }}
-          >
-            {meta.label}
-          </span>
-        </div>
-
-        {/* Conditional logic badge */}
-        {hasConditions && (
-          <span
-            style={{
-              fontSize: '9px',
-              color: '#c586c0',
-              fontFamily: "'JetBrains Mono', monospace",
-              background: 'rgba(197,134,192,0.12)',
-              padding: '1px 5px',
-              flexShrink: 0,
-              letterSpacing: '0.04em',
-            }}
-          >
-            IF
-          </span>
-        )}
-
-        {/* Required badge */}
-        {field.required && (
-          <span
-            style={{
-              fontSize: '9px',
-              color: '#ef4444',
-              fontFamily: "'JetBrains Mono', monospace",
-              background: 'rgba(239,68,68,0.12)',
-              padding: '1px 5px',
-              flexShrink: 0,
-              letterSpacing: '0.04em',
-            }}
-          >
-            REQ
-          </span>
-        )}
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 });
