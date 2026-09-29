@@ -174,7 +174,10 @@ export async function saveDraft(
 export async function discardDraft(formId: string, baseRevision: number, requesterId: string): Promise<DraftView> {
   const form = await loadOwnedForm(formId, requesterId);
   return db.transaction(async (tx) => {
-    const row = await getOrCreateDraft(tx, formId);
+    await getOrCreateDraft(tx, formId);
+    // Lock so a concurrent publish finishes first and the rebuild below reads what it committed.
+    const [row] = await tx.select().from(formDrafts).where(eq(formDrafts.formId, formId)).for('update');
+    if (!row) throw ApiError.internal('Draft missing');
     if (row.publishedRevision === null) throw ApiError.badRequest('This form has never been published.');
     const content = await buildDraftContentFromPublished(tx, formId);
     const next = baseRevision + 1;
