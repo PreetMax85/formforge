@@ -46,7 +46,12 @@ export function dropBrokenRules(fieldList: DraftContent['fields']): DraftContent
   });
 }
 
-/** Builds draft content from what is live now: the form row plus its non-retired questions in order. */
+/**
+ * Builds draft content from what is live now: the form row plus its
+ * non-retired questions in order. The result is validated against
+ * DraftContentSchema, so no caller can write an invalid draft row; data the
+ * builder cannot hold (too many questions, over-length text) throws 400.
+ */
 export async function buildDraftContentFromPublished(conn: DbOrTx, formId: string): Promise<DraftContent> {
   const [form] = await conn.select().from(forms).where(eq(forms.id, formId)).limit(1);
   if (!form) throw ApiError.notFound('Form not found');
@@ -71,14 +76,18 @@ export async function buildDraftContentFromPublished(conn: DbOrTx, formId: strin
     };
   });
 
-  return {
+  const parsed = DraftContentSchema.safeParse({
     title:           form.title,
     description:     form.description,
     theme:           isTheme(form.theme) ? form.theme : 'default',
     thankYouTitle:   form.thankYouTitle,
     thankYouMessage: form.thankYouMessage,
     fields:          dropBrokenRules(mapped),
-  };
+  });
+  if (!parsed.success) {
+    throw ApiError.badRequest('This form has more questions or longer text than the builder supports.');
+  }
+  return parsed.data;
 }
 
 /**

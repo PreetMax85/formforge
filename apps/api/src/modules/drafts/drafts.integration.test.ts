@@ -7,17 +7,19 @@ const run = describe.skipIf(!process.env.TEST_DATABASE_URL);
 
 run('drafts service (Neon branch)', async () => {
   const { db, closeDb } = await import('../../common/db/index');
-  const { users, forms, fields } = await import('@repo/db/schema');
+  const { users, forms, fields, formDrafts } = await import('@repo/db/schema');
   const { getDraft, saveDraft, discardDraft } = await import('./drafts.service');
 
   const userId = randomUUID();
   const formId = randomUUID();
   const brokenRuleFormId = randomUUID();
+  const oversizedFormId = randomUUID();
 
   beforeAll(async () => {
     await db.insert(users).values({ id: userId, email: `${userId}@test.local`, name: 'Test', passwordHash: 'x' });
     await db.insert(forms).values({ id: formId, creatorId: userId, title: 'T', slug: `t-${formId.slice(0, 8)}` });
     await db.insert(forms).values({ id: brokenRuleFormId, creatorId: userId, title: 'B', slug: `b-${brokenRuleFormId.slice(0, 8)}` });
+    await db.insert(forms).values({ id: oversizedFormId, creatorId: userId, title: 'O', slug: `o-${oversizedFormId.slice(0, 8)}` });
   });
 
   afterAll(async () => {
@@ -69,5 +71,20 @@ run('drafts service (Neon branch)', async () => {
     expect(draft.content.fields).toHaveLength(1);
     expect(draft.content.fields[0]?.id).toBe(fieldId);
     expect(draft.content.fields[0]?.conditions).toBeNull();
+  });
+
+  it('refuses to build a draft from more questions than the builder supports and writes no row', async () => {
+    await db.insert(fields).values(
+      Array.from({ length: 51 }, (_, order) => ({
+        formId: oversizedFormId,
+        type: 'short_text' as const,
+        label: `Q${order}`,
+        order,
+      })),
+    );
+
+    await expect(getDraft(oversizedFormId, userId)).rejects.toMatchObject({ statusCode: 400 });
+    const rows = await db.select().from(formDrafts).where(eq(formDrafts.formId, oversizedFormId));
+    expect(rows).toHaveLength(0);
   });
 });
