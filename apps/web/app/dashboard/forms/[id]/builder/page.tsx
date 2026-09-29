@@ -103,6 +103,14 @@ export default function BuilderPage() {
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const consoleRef = useRef<ConsoleMessage[]>([]);
 
+  // Counts local edits. A save compares it before and after the request to
+  // tell whether the user kept editing while the save was in flight.
+  const editCountRef = useRef(0);
+  const markDirty = useCallback(() => {
+    editCountRef.current += 1;
+    setIsDirty(true);
+  }, []);
+
   const MAX_CONSOLE_LINES = 200;
 
   function pushLog(type: ConsoleMessage['type'], text: string) {
@@ -188,10 +196,10 @@ export default function BuilderPage() {
       };
       setFields((prev) => [...prev, { ...newField, order: prev.length }]);
       setActiveFieldId(newField.id);
-      setIsDirty(true);
+      markDirty();
       pushLog('info', `Asset "${label}" added to scene (unsaved)`);
     },
-    [formId]
+    [formId, markDirty]
   );
 
   /* ── DnD handlers ────────────────────────────────────────────── */
@@ -217,10 +225,10 @@ export default function BuilderPage() {
           if (oldIndex === -1 || newIndex === -1) return prev;
           return arrayMove(prev, oldIndex, newIndex).map((f, i) => ({ ...f, order: i }));
         });
-        setIsDirty(true);
+        markDirty();
       }
     },
-    [addField]
+    [addField, markDirty]
   );
 
   const handleDragOver = useCallback((_event: DragOverEvent) => {
@@ -234,15 +242,17 @@ export default function BuilderPage() {
         f.id === activeFieldId ? { ...f, ...updated } : f
       )
     );
-    setIsDirty(true);
-  }, [activeFieldId]);
+    markDirty();
+  }, [activeFieldId, markDirty]);
 
   /* ── Save ────────────────────────────────────────────────────── */
   function handleSave() {
-    // Snapshot pre-save state so we can remap activeFieldId by index after
-    // temp IDs become real UUIDs.
-    const preSaveActiveId = activeFieldId;
-    const preSaveOrder    = fields.map((f) => f.id);
+    if (upsertMutation.isPending) return;
+
+    // The server returns every field in the order sent, so position i of the
+    // reply is the saved copy of preSaveIds[i]. That maps temp IDs to real ones.
+    const preSaveIds       = fields.map((f) => f.id);
+    const editCountAtStart = editCountRef.current;
 
     upsertMutation.mutate(
       {
@@ -263,21 +273,23 @@ export default function BuilderPage() {
       {
         onSuccess: (res) => {
           const newFields = (res.data?.fields ?? []) as unknown as Field[];
-          setFields(newFields);
-          setIsDirty(false);
+          const savedIdFor = new Map(
+            preSaveIds.map((id, i) => [id, newFields[i]?.id ?? id] as const)
+          );
+
+          if (editCountRef.current === editCountAtStart) {
+            setFields(newFields);
+            setIsDirty(false);
+          } else {
+            // Edits made during the save are newer than the server's copy:
+            // keep them, only swap in the real IDs, and stay unsaved.
+            setFields((prev) => prev.map((f) => ({ ...f, id: savedIdFor.get(f.id) ?? f.id })));
+          }
+          setActiveFieldId((id) => (id === null ? null : savedIdFor.get(id) ?? id));
+
           pushLog('success', `Saved ${newFields.length} fields`);
           toast.success('Fields saved.');
           void utils.forms.byId.invalidate({ id: formId });
-
-          // Remap activeFieldId by position — array order matches `order` ASC
-          if (preSaveActiveId) {
-            const oldIdx = preSaveOrder.indexOf(preSaveActiveId);
-            if (oldIdx >= 0 && newFields[oldIdx]) {
-              setActiveFieldId(newFields[oldIdx].id);
-            } else {
-              setActiveFieldId(null);
-            }
-          }
         },
       }
     );
@@ -315,7 +327,7 @@ export default function BuilderPage() {
           if (isTemp) {
             setFields((prev) => prev.filter((f) => f.id !== field.id));
             if (activeFieldId === field.id) setActiveFieldId(null);
-            setIsDirty(true);
+            markDirty();
             pushLog('info', `Removed "${label}" from scene`);
             return;
           }
@@ -336,11 +348,17 @@ export default function BuilderPage() {
     });
   }
 
+  // The "Save" toast actions below can be clicked long after the toast
+  // appeared. Calling through a ref saves the fields as they are at click
+  // time, not the stale copy captured when the toast was created.
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
   /* ── Play (preview) ──────────────────────────────────────────── */
   function handlePlay() {
     if (isDirty) {
       toast('Save your changes first before previewing.', {
-        action: { label: 'Save', onClick: handleSave },
+        action: { label: 'Save', onClick: () => handleSaveRef.current() },
       });
       return;
     }
@@ -353,7 +371,7 @@ export default function BuilderPage() {
   function handlePublish() {
     if (isDirty) {
       toast('Save your changes first before publishing.', {
-        action: { label: 'Save', onClick: handleSave },
+        action: { label: 'Save', onClick: () => handleSaveRef.current() },
       });
       return;
     }
