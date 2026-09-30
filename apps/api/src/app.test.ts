@@ -19,6 +19,7 @@ const { createApp }                   = await import('./app');
 const { db }                          = await import('./common/db/index');
 const { getFormBySlug, exploreForms } = await import('./modules/forms/forms.service');
 const { ApiError }                    = await import('@repo/shared');
+const { logger }                      = await import('./common/logger');
 
 const now = new Date('2026-09-01T00:00:00.000Z');
 
@@ -149,6 +150,34 @@ describe('GET /api/v1/forms/{slug}', () => {
     const body = (await res.json()) as { data: Record<string, unknown> };
 
     expect(body.data).not.toHaveProperty('passwordHash');
+  });
+});
+
+describe('tRPC error logging', () => {
+  const bySlug = (slug: string) =>
+    fetch(`${baseUrl}/trpc/forms.bySlug?input=${encodeURIComponent(JSON.stringify({ slug }))}`);
+
+  it('logs an unexpected failure with its path and cause', async () => {
+    const boom = new Error('connection terminated unexpectedly');
+    vi.mocked(getFormBySlug).mockRejectedValue(boom);
+    const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    const res = await bySlug('samurai-oath');
+
+    expect(res.status).toBe(500);
+    expect(logged).toHaveBeenCalledWith({ path: 'forms.bySlug', err: boom }, expect.any(String));
+    logged.mockRestore();
+  });
+
+  it('does not log a 4xx as an error', async () => {
+    vi.mocked(getFormBySlug).mockRejectedValue(ApiError.notFound('Form not found'));
+    const logged = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    const res = await bySlug('no-such-form');
+
+    expect(res.status).toBe(404);
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
   });
 });
 

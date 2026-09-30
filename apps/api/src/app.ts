@@ -98,7 +98,17 @@ export function createApp(): express.Application {
   app.use(optionalAuth);
 
   // tRPC internal endpoint
-  app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));
+  app.use('/trpc', createExpressMiddleware({
+    router: appRouter,
+    createContext,
+    // Anything that is not a translated ApiError reaches the client as a bare
+    // 500, and was logged nowhere. 4xx errors are expected outcomes (wrong
+    // password, missing form, stale draft) and stay out of the error log.
+    onError: ({ error, path }) => {
+      if (error.code !== 'INTERNAL_SERVER_ERROR') return;
+      logger.error({ path, err: error.cause ?? error }, 'Unexpected tRPC error');
+    },
+  }));
 
   // OpenAPI REST adapter
   app.use('/api/v1', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
