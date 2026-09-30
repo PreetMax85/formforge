@@ -27,6 +27,9 @@ const AUJLA_FORM = {
   theme: 'karan-aujla-concert',
 };
 
+/** Fixed publish date for the seeded forms, so seed data stays deterministic. */
+const SEED_PUBLISHED_AT = new Date('2026-01-01T00:00:00Z');
+
 const DEMO_FORM_SLUGS = [SAMURAI_FORM.slug, JJK_FORM.slug, AUJLA_FORM.slug];
 const DEMO_USER_EMAILS = [DEMO_USER.email, 'demo@formforge.tech'];
 const LEGACY_ADMIN_EMAILS = ['admin@formforge.tech'];
@@ -50,21 +53,21 @@ async function seed() {
       id: SAMURAI_FORM.id, creatorId: DEMO_USER.id,
       title: 'The Samurai Oath',
       description: 'Which path do you walk — honor or survival?',
-      slug: SAMURAI_FORM.slug, status: 'published', visibility: 'public',
+      slug: SAMURAI_FORM.slug, status: 'published', publishedAt: SEED_PUBLISHED_AT, visibility: 'public',
       theme: SAMURAI_FORM.theme, responseCount: 0, viewCount: 0,
     },
     {
       id: JJK_FORM.id, creatorId: DEMO_USER.id,
       title: 'Sorcerer Registration',
       description: 'Declare your cursed technique. Sign the binding vow.',
-      slug: JJK_FORM.slug, status: 'published', visibility: 'public',
+      slug: JJK_FORM.slug, status: 'published', publishedAt: SEED_PUBLISHED_AT, visibility: 'public',
       theme: JJK_FORM.theme, responseCount: 0, viewCount: 0,
     },
     {
       id: AUJLA_FORM.id, creatorId: DEMO_USER.id,
       title: 'VIP Backstage Pass',
       description: 'One night. One stage. Which song hits different?',
-      slug: AUJLA_FORM.slug, status: 'published', visibility: 'public',
+      slug: AUJLA_FORM.slug, status: 'published', publishedAt: SEED_PUBLISHED_AT, visibility: 'public',
       theme: AUJLA_FORM.theme, responseCount: 0, viewCount: 0,
     },
   ]).onConflictDoNothing();

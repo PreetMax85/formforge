@@ -146,6 +146,27 @@ run('drafts service (Neon branch)', async () => {
     expect(discarded.publishedRevision).toBe(discarded.revision);
   });
 
+  it('treats a published form without published_at as published and lets discard restore it', async () => {
+    // Forms seeded (or published) before published_at was reliably set: status says published, the date is NULL.
+    const legacyFormId = randomUUID();
+    await db.insert(forms).values({
+      id: legacyFormId, creatorId: userId, title: 'Legacy', slug: `l-${legacyFormId.slice(0, 8)}`, status: 'published',
+    });
+    await db.insert(fields).values({ formId: legacyFormId, type: 'short_text', label: 'Live question', order: 0 });
+
+    let d = await getDraft(legacyFormId, userId);
+    expect(d.publishedRevision).toBe(1);
+
+    await saveDraft(legacyFormId, d.revision, { ...d.content, title: 'Edited title' }, userId);
+    d = await getDraft(legacyFormId, userId);
+    expect(d.publishedRevision).not.toBe(d.revision);
+
+    const discarded = await discardDraft(legacyFormId, d.revision, userId);
+    expect(discarded.content.title).toBe('Legacy');
+    expect(discarded.content.fields.map((f) => f.label)).toEqual(['Live question']);
+    expect(discarded.publishedRevision).toBe(discarded.revision);
+  });
+
   it('refuses a question id that belongs to another form (foreign id)', async () => {
     const otherFormId = randomUUID();
     await db.insert(forms).values({ id: otherFormId, creatorId: userId, title: 'Other', slug: `o-${otherFormId.slice(0, 8)}` });

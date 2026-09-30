@@ -96,17 +96,20 @@ export async function buildDraftContentFromPublished(conn: DbOrTx, formId: strin
  * Returns the form's draft row, creating it from the published tables the
  * first time it is needed. Forms created before drafts existed get theirs
  * this way; concurrent first calls are safe thanks to ON CONFLICT DO NOTHING.
+ * A form counts as published when `status` says so even if `published_at` is
+ * NULL: forms seeded or published before that column was reliably set exist,
+ * and treating them as never published would hide their unpublished changes.
  */
 export async function getOrCreateDraft(conn: DbOrTx, formId: string): Promise<typeof formDrafts.$inferSelect> {
   const [existing] = await conn.select().from(formDrafts).where(eq(formDrafts.formId, formId)).limit(1);
   if (existing) return existing;
 
-  const [form] = await conn.select({ publishedAt: forms.publishedAt }).from(forms).where(eq(forms.id, formId)).limit(1);
+  const [form] = await conn.select({ publishedAt: forms.publishedAt, status: forms.status }).from(forms).where(eq(forms.id, formId)).limit(1);
   if (!form) throw ApiError.notFound('Form not found');
   const content = await buildDraftContentFromPublished(conn, formId);
   await conn
     .insert(formDrafts)
-    .values({ formId, content, revision: 1, publishedRevision: form.publishedAt ? 1 : null })
+    .values({ formId, content, revision: 1, publishedRevision: form.publishedAt !== null || form.status === 'published' ? 1 : null })
     .onConflictDoNothing();
 
   const [created] = await conn.select().from(formDrafts).where(eq(formDrafts.formId, formId)).limit(1);
