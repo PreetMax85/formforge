@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '../../common/db/index';
+import { logger } from '../../common/logger';
 import { forms, fields, formDrafts } from '@repo/db/schema';
 import {
   ApiError,
@@ -87,6 +88,7 @@ export async function buildDraftContentFromPublished(conn: DbOrTx, formId: strin
     fields:          dropBrokenRules(mapped),
   });
   if (!parsed.success) {
+    logger.warn({ formId, issues: parsed.error.issues }, 'Published form does not fit the draft schema');
     throw ApiError.badRequest('This form has more questions or longer text than the builder supports.');
   }
   return parsed.data;

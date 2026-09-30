@@ -90,6 +90,8 @@ interface DashboardForm {
   theme: string;
   responseCount: number;
   viewCount: number;
+  draftTitle: string;
+  hasUnpublishedChanges: boolean;
 }
 
 function FormCard({
@@ -220,7 +222,7 @@ function FormCard({
               lineHeight: 1.3,
             }}
           >
-            {form.title}
+            {form.draftTitle}
           </h3>
 
           {/* Description */}
@@ -243,7 +245,7 @@ function FormCard({
           )}
 
           {/* Status + slug row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
             <span
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
@@ -260,6 +262,21 @@ function FormCard({
             >
               {form.status}
             </span>
+            {form.hasUnpublishedChanges && (
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                  color: "#9ca3af",
+                  background: "rgba(156,163,175,0.1)",
+                  padding: "2px 8px",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Unpublished changes
+              </span>
+            )}
             <span
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
@@ -377,9 +394,12 @@ export default function DashboardPage() {
     refetchOnWindowFocus: false,
   });
 
+  // Always refetch on mount: the builder and settings pages change draft
+  // titles and unpublished-changes flags, and the app-wide staleTime is Infinity.
   const myFormsQuery = trpc.forms.myForms.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnMount: "always",
   });
 
   useEffect(() => {

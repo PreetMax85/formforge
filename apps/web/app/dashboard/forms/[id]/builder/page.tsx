@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
+import { findPublishProblems, MAX_DRAFT_FIELDS, type DraftField } from '@repo/shared';
 
 import { trpc } from '~/trpc/client';
 import { GameEngineShell } from '~/components/engine/GameEngineShell';
@@ -27,15 +28,38 @@ import { ConsolePanel, type ConsoleMessage } from '~/components/engine/ConsolePa
 import { FieldPalette } from '~/components/builder/FieldPalette';
 import { BuilderCanvas, DROPPABLE_ID } from '~/components/builder/BuilderCanvas';
 import { PublishModal } from '~/components/builder/PublishModal';
+import DraftStatusBar from '~/components/builder/DraftStatusBar';
 import { FormRenderer } from '~/components/form/FormRenderer';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
+import { useDraft } from '~/lib/draft/useDraft';
 
 import type { Field, FieldType } from '~/lib/types/field';
 
-/** Generate a stable temporary ID for new (unsaved) fields */
-function tempId(): string {
-  return `temp-${Date.now()}-${crypto.randomUUID().slice(0, 5)}`;
+/** The builder's components take the older `Field` shape; this maps a draft question to it. */
+function toBuilderField(f: DraftField, index: number, formId: string): Field {
+  return {
+    id: f.id, formId, type: f.type, label: f.label, placeholder: f.placeholder,
+    description: f.description, required: f.required, order: index,
+    config: f.config as Field['config'], conditions: f.conditions,
+    createdAt: '', updatedAt: '',
+  };
+}
+
+/** Maps a builder `Field` back to the draft question it is saved as. */
+function toDraftField(f: Field): DraftField {
+  return {
+    id: f.id, type: f.type, label: f.label, placeholder: f.placeholder ?? null,
+    description: f.description ?? null, required: f.required,
+    config: f.config as Record<string, unknown>, conditions: f.conditions ?? null,
+  };
+}
+
+/** True when a request failed because another tab changed the draft (HTTP 409). */
+function isConflictError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null || !('data' in err)) return false;
+  const data = (err as { data?: { httpStatus?: number; code?: string } | null }).data;
+  return data?.httpStatus === 409 || data?.code === 'CONFLICT';
 }
 
 /** Default config per field type */
@@ -111,6 +135,8 @@ export default function BuilderPage() {
   const formId = params.id;
 
   /* ── Server state ────────────────────────────────────────────── */
+  // The draft (useDraft) holds everything the creator edits. The form query
+  // only supplies the operational settings the preview needs.
   const utils = trpc.useUtils();
   const {
     data: response,
@@ -118,26 +144,32 @@ export default function BuilderPage() {
     error,
     refetch,
   } = trpc.forms.byId.useQuery({ id: formId });
+  const draft = useDraft(formId);
 
   const form = response?.data;
 
+  /* Every edit goes through the draft; the builder's components see it as `fields`. */
+  const fields = useMemo(
+    () => (draft.content?.fields ?? []).map((f, i) => toBuilderField(f, i, formId)),
+    [draft.content, formId],
+  );
+  const { update: updateDraft } = draft; // stable across renders
+  const setFields = useCallback(
+    (recipe: (prev: Field[]) => Field[]) =>
+      updateDraft((c) => ({
+        ...c,
+        fields: recipe(c.fields.map((f, i) => toBuilderField(f, i, formId))).map(toDraftField),
+      })),
+    [updateDraft, formId],
+  );
+
   /* ── Local UI state ──────────────────────────────────────────── */
-  const [fields, setFields] = useState<Field[]>([]);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(true);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const consoleRef = useRef<ConsoleMessage[]>([]);
-
-  // Counts local edits. A save compares it before and after the request to
-  // tell whether the user kept editing while the save was in flight.
-  const editCountRef = useRef(0);
-  const markDirty = useCallback(() => {
-    editCountRef.current += 1;
-    setIsDirty(true);
-  }, []);
 
   const MAX_CONSOLE_LINES = 200;
 
@@ -146,57 +178,34 @@ export default function BuilderPage() {
     setConsoleMessages(consoleRef.current);
   }
 
-  /* Sync server fields to local state once on load */
+  /* Log the scene once, when the draft first loads */
+  const hasDraft = draft.content !== null;
   useEffect(() => {
-    if (form) {
-      const loadedFields = (form.fields as Field[]) ?? [];
-      setFields(loadedFields);
-      consoleRef.current = [];
-      pushLog(
-        'success',
-        `Scene loaded: "${form.title}" (${loadedFields.length} fields${loadedFields.length === 0 ? ', empty scene' : ''})`
-      );
-    }
-  }, [form?.id]);
+    if (!draft.content) return;
+    const count = draft.content.fields.length;
+    consoleRef.current = [];
+    pushLog(
+      'success',
+      `Scene loaded: "${draft.content.title}" (${count} fields${count === 0 ? ', empty scene' : ''})`
+    );
+  }, [hasDraft, formId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Mutations ───────────────────────────────────────────────── */
-  // Note: order is part of the upsertMany payload, so we no longer fire a
-  // separate reorder mutation on every drag. Reorder happens on Save.
-  const upsertMutation = trpc.fields.upsertMany.useMutation({
-    onError: (err) => {
-      pushLog('error', `Save failed: ${err.message}`);
-      toast.error(err.message);
-    },
-  });
-
-  const deleteFieldMutation = trpc.fields.delete.useMutation({
-    onError: (err) => {
-      pushLog('error', `Delete failed: ${err.message}`);
-      toast.error(err.message);
-    },
-  });
-
-  const publishMutation = trpc.forms.publish.useMutation({
-    onSuccess: () => {
-      pushLog('success', 'Form published — now accepting responses');
-      toast.success('Form published!');
-      setPublishModalOpen(false);
-    },
-    onError: (err) => {
-      pushLog('error', `Publish failed: ${err.message}`);
-      toast.error(err.message);
-    },
-  });
-
-  /* ── Unsaved-changes guard ──────────────────────────────────── */
-  // Closing the tab or reloading with unsaved fields shows the browser's
-  // "Leave site?" prompt. In-app links are guarded in Menubar.
+  /* Offer to restore edits a closed tab never got to save */
   useEffect(() => {
-    if (!isDirty) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [isDirty]);
+    if (!draft.restorable) return;
+    toast('Restore changes that were not saved?', {
+      description: 'They were kept in this tab when the page closed.',
+      action: { label: 'Restore', onClick: draft.restore },
+      cancel: { label: 'Discard', onClick: draft.dismissRestore },
+      duration: Infinity,
+    });
+  }, [draft.restorable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* A failed reload must not replace a working editor: report it in a toast */
+  const reloadError = draft.content !== null ? draft.error : null;
+  useEffect(() => {
+    if (reloadError) toast.error(`Couldn't reload the latest version: ${reloadError}`);
+  }, [reloadError]);
 
   /* ── DnD sensors ─────────────────────────────────────────────── */
   const sensors = useSensors(
@@ -206,11 +215,18 @@ export default function BuilderPage() {
   /* ── Add field ───────────────────────────────────────────────── */
   // Clicking a palette row and dropping it on the canvas both land here, and
   // both append: the drop position is not used.
+  // A draft holds at most MAX_DRAFT_FIELDS questions; one more would make
+  // every later autosave fail, so stop here and say why.
+  const fieldCount = fields.length;
   const addField = useCallback(
     (type: FieldType) => {
+      if (fieldCount >= MAX_DRAFT_FIELDS) {
+        toast.error(`This form has the maximum of ${MAX_DRAFT_FIELDS} questions.`);
+        return;
+      }
       const label = defaultLabel(type);
       const newField: Field = {
-        id: tempId(),
+        id: crypto.randomUUID(),
         formId,
         type,
         label,
@@ -222,12 +238,13 @@ export default function BuilderPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setFields((prev) => [...prev, { ...newField, order: prev.length }]);
+      // Checked again against the draft itself: two adds can land in one render.
+      setFields((prev) =>
+        prev.length >= MAX_DRAFT_FIELDS ? prev : [...prev, { ...newField, order: prev.length }]);
       setActiveFieldId(newField.id);
-      markDirty();
-      pushLog('info', `Asset "${label}" added to scene (unsaved)`);
+      pushLog('info', `Asset "${label}" added to scene`);
     },
-    [formId, markDirty]
+    [formId, setFields, fieldCount]
   );
 
   /* ── DnD handlers ────────────────────────────────────────────── */
@@ -245,7 +262,7 @@ export default function BuilderPage() {
         return;
       }
 
-      // Reorder existing fields — local only; persisted on Save via upsertMany
+      // Reorder existing fields
       if (activeId !== overId && !activeId.startsWith('palette-')) {
         setFields((prev) => {
           const oldIndex = prev.findIndex((f) => f.id === activeId);
@@ -253,10 +270,9 @@ export default function BuilderPage() {
           if (oldIndex === -1 || newIndex === -1) return prev;
           return arrayMove(prev, oldIndex, newIndex).map((f, i) => ({ ...f, order: i }));
         });
-        markDirty();
       }
     },
-    [addField, markDirty]
+    [addField, setFields]
   );
 
   const handleDragOver = useCallback((_event: DragOverEvent) => {
@@ -270,170 +286,111 @@ export default function BuilderPage() {
         f.id === activeFieldId ? { ...f, ...updated } : f
       )
     );
-    markDirty();
-  }, [activeFieldId, markDirty]);
-
-  /* ── Save ────────────────────────────────────────────────────── */
-  function handleSave() {
-    if (upsertMutation.isPending) return;
-
-    // The server returns every field in the order sent, so position i of the
-    // reply is the saved copy of preSaveIds[i]. That maps temp IDs to real ones.
-    const preSaveIds       = fields.map((f) => f.id);
-    const editCountAtStart = editCountRef.current;
-
-    upsertMutation.mutate(
-      {
-        formId,
-        fields: fields.map((f, i) => ({
-          ...(f.id.startsWith('temp-') ? {} : { id: f.id }),
-          formId,
-          type:        f.type,
-          label:       f.label,
-          placeholder: f.placeholder ?? undefined,
-          description: f.description ?? undefined,
-          required:    f.required,
-          order:       i,
-          config:      f.config,
-          conditions:  f.conditions ?? undefined,
-        })),
-      },
-      {
-        onSuccess: (res) => {
-          const newFields = (res.data?.fields ?? []) as unknown as Field[];
-          const savedIdFor = new Map(
-            preSaveIds.map((id, i) => [id, newFields[i]?.id ?? id] as const)
-          );
-
-          if (editCountRef.current === editCountAtStart) {
-            setFields(newFields);
-            setIsDirty(false);
-          } else {
-            // Edits made during the save are newer than the server's copy:
-            // keep them, only swap in the real IDs, and stay unsaved.
-            setFields((prev) => prev.map((f) => ({ ...f, id: savedIdFor.get(f.id) ?? f.id })));
-          }
-          setActiveFieldId((id) => (id === null ? null : savedIdFor.get(id) ?? id));
-
-          pushLog('success', `Saved ${newFields.length} fields`);
-          toast.success('Fields saved.');
-          void utils.forms.byId.invalidate({ id: formId });
-        },
-      }
-    );
-  }
-
-  /* ── Reset ───────────────────────────────────────────────────── */
-  function handleReset() {
-    toast('Discard all changes?', {
-      description: 'All unsaved changes will be lost.',
-      action: {
-        label: 'Discard',
-        onClick: () => {
-          const serverFields = (form?.fields as Field[]) ?? [];
-          setFields(serverFields);
-          setActiveFieldId(null);
-          setIsDirty(false);
-          pushLog('info', 'Scene reset to last saved state');
-        },
-      },
-    });
-  }
+  }, [activeFieldId, setFields]);
 
   /* ── Delete field ────────────────────────────────────────────── */
   function handleDeleteField(field: Field) {
-    const isTemp = field.id.startsWith('temp-');
-    const label  = field.label || 'this field';
+    const label = field.label || 'this field';
 
     toast(`Delete "${label}"?`, {
-      description: isTemp
-        ? 'It hasn\'t been saved yet.'
-        : 'This will also delete all of its responses.',
+      description: 'It will leave the live form when you publish. Its answers are kept.',
       action: {
         label: 'Delete',
         onClick: () => {
-          if (isTemp) {
-            setFields((prev) => prev.filter((f) => f.id !== field.id));
-            if (activeFieldId === field.id) setActiveFieldId(null);
-            markDirty();
-            pushLog('info', `Removed "${label}" from scene`);
-            return;
-          }
-          deleteFieldMutation.mutate(
-            { id: field.id },
-            {
-              onSuccess: () => {
-                setFields((prev) => prev.filter((f) => f.id !== field.id));
-                if (activeFieldId === field.id) setActiveFieldId(null);
-                pushLog('info', `Deleted "${label}" and its responses`);
-                toast.success('Field deleted.');
-                void utils.forms.byId.invalidate({ id: formId });
-              },
-            }
-          );
+          setFields((prev) => prev.filter((f) => f.id !== field.id));
+          if (activeFieldId === field.id) setActiveFieldId(null);
+          pushLog('info', `Removed "${label}" from scene`);
         },
       },
     });
   }
 
-  // The "Save" toast actions below can be clicked long after the toast
-  // appeared. Calling through a ref saves the fields as they are at click
-  // time, not the stale copy captured when the toast was created.
-  const handleSaveRef = useRef(handleSave);
-  handleSaveRef.current = handleSave;
+  /* ── Discard ─────────────────────────────────────────────────── */
+  function handleDiscard() {
+    draft.discard().then(
+      () => {
+        setActiveFieldId(null);
+        pushLog('info', 'Scene reset to the last published version');
+        toast.success('Changes discarded.');
+      },
+      (err: unknown) => {
+        if (isConflictError(err)) {
+          // Another tab saved in between: what is on screen is out of date.
+          toast.error('This form was changed in another tab. Loading the latest version.');
+          draft.reload();
+          return;
+        }
+        toast.error(err instanceof Error ? err.message : 'Discard failed.');
+      },
+    );
+  }
 
   /* ── Play (preview) ──────────────────────────────────────────── */
+  // The preview renders from the draft, so there is nothing to save first.
   function handlePlay() {
-    if (isDirty) {
-      toast('Save your changes first before previewing.', {
-        action: { label: 'Save', onClick: () => handleSaveRef.current() },
-      });
-      return;
-    }
     setPreviewOpen(true);
   }
 
   /* ── Publish ─────────────────────────────────────────────────── */
-  // Publishing uses the last saved fields, so unsaved work would silently
-  // be left out of the live form. Ask for a save first, as PLAY does.
   function handlePublish() {
-    if (isDirty) {
-      toast('Save your changes first before publishing.', {
-        action: { label: 'Save', onClick: () => handleSaveRef.current() },
-      });
+    const problems = draft.content ? findPublishProblems(draft.content) : [];
+    if (problems.length > 0) {
+      toast.error(problems[0]);
       return;
     }
     setPublishModalOpen(true);
   }
 
-  function handlePublishConfirm(visibility: 'public' | 'unlisted') {
-    publishMutation.mutate({ id: formId, visibility });
+  async function handlePublishConfirm(visibility: 'public' | 'unlisted') {
+    try {
+      const ok = await draft.publish(visibility);
+      if (!ok) {
+        toast.error("Couldn't save your latest changes, so nothing was published.");
+        return;
+      }
+      pushLog('success', 'Published');
+      toast.success('Published.');
+      setPublishModalOpen(false);
+      void utils.forms.byId.invalidate({ id: formId });
+    } catch (err) {
+      pushLog('error', `Publish failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+      toast.error(err instanceof Error ? err.message : 'Publish failed.');
+    }
   }
 
   /* ── Active field ────────────────────────────────────────────── */
   const activeField = fields.find((f) => f.id === activeFieldId) ?? null;
 
   /* ── 4-state async pattern ───────────────────────────────────── */
-  // isLoading must be checked first: checking !form first showed "not
-  // found" for the whole delay window before the loading screen appears.
-  const showLoading = useDelayedLoading(isLoading);
-  if (isLoading) {
+  // Loading is checked first: checking !form first showed "not found" for
+  // the whole delay window before the loading screen appears. A draft that
+  // is not there yet, without an error, is still loading, not missing.
+  const loading = isLoading || draft.isLoading || (draft.content === null && !draft.error);
+  const showLoading = useDelayedLoading(loading);
+  if (loading) {
     if (!showLoading) return null;
     return <LoadingScreen variant="fullscreen" />;
   }
 
-  if (error) {
+  // Once a draft is showing, a failed reload is reported in a toast instead.
+  const loadError = (draft.content === null ? draft.error : null) ?? error?.message ?? null;
+  if (loadError) {
     return (
       <FullscreenMessage>
         <span style={{ color: '#ef4444' }}>
-          [ERROR] {error.message}
+          [ERROR] {loadError}
         </span>
-        <MessageActions onRetry={() => void refetch()} />
+        <MessageActions
+          onRetry={() => {
+            void refetch();
+            draft.reload();
+          }}
+        />
       </FullscreenMessage>
     );
   }
 
-  if (!form) {
+  if (!form || !draft.content) {
     return (
       <FullscreenMessage>
         Form not found.
@@ -469,15 +426,15 @@ export default function BuilderPage() {
           formConfig={{
             id: form.id,
             slug: form.slug,
-            title: form.title,
-            description: form.description,
-            theme: form.theme,
+            title: draft.content.title,
+            description: draft.content.description,
+            theme: draft.content.theme,
             showProgressBar: form.showProgressBar,
             requireEmail: form.requireEmail,
             allowAnonymous: form.allowAnonymous,
-            thankYouTitle: form.thankYouTitle,
-            thankYouMessage: form.thankYouMessage,
-            fields: fields as Field[],
+            thankYouTitle: draft.content.thankYouTitle,
+            thankYouMessage: draft.content.thankYouMessage,
+            fields,
           }}
           mode="preview"
         />
@@ -507,12 +464,14 @@ export default function BuilderPage() {
         <GameEngineShell
           menubar={
             <Menubar
-              formTitle={form.title}
+              formTitle={draft.content.title}
               formId={formId}
               onPlay={handlePlay}
               onPublish={handlePublish}
-              isPublishing={publishMutation.isPending}
-              hasUnsavedChanges={isDirty}
+              isPublishing={draft.isPublishing}
+              // Leaving saves pending edits, so warn only when that save cannot succeed.
+              hasUnsavedChanges={draft.status === 'offline' || draft.status === 'error' || draft.status === 'conflict'}
+              publishLabel={draft.hasUnpublishedChanges ? 'PUBLISH CHANGES' : 'PUBLISH'}
             />
           }
           hierarchy={
@@ -554,66 +513,36 @@ export default function BuilderPage() {
         />
       </DndContext>
 
-      {/* Save & Reset buttons — shown when dirty */}
-      {isDirty && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: consoleOpen ? '168px' : '36px',
-            right: '296px',
-            zIndex: 30,
-            display: 'flex',
-            gap: '8px',
-            transition: 'bottom 0.2s ease',
-          }}
-        >
-          <button
-            onClick={handleReset}
-            style={{
-              padding: '6px 16px',
-              background: '#252526',
-              border: '1px solid #3c3c3c',
-              color: '#9ca3af',
-              fontSize: '11px',
-              fontFamily: "'JetBrains Mono', monospace",
-              cursor: 'pointer',
-              letterSpacing: '0.06em',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#f44336';
-              (e.currentTarget as HTMLButtonElement).style.color = '#f44336';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#3c3c3c';
-              (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af';
-            }}
-          >
-            RESET
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={upsertMutation.isPending}
-            style={{
-              padding: '6px 16px',
-              background: '#252526',
-              border: '1px solid #569cd6',
-              color: '#569cd6',
-              fontSize: '11px',
-              fontFamily: "'JetBrains Mono', monospace",
-              cursor: upsertMutation.isPending ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.06em',
-            }}
-          >
-            {upsertMutation.isPending ? 'SAVING...' : '● SAVE CHANGES'}
-          </button>
-        </div>
-      )}
+      {/* Autosave status, Discard changes and View live */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: consoleOpen ? '168px' : '36px',
+          right: '296px',
+          zIndex: 30,
+          transition: 'bottom 0.2s ease',
+        }}
+      >
+        <DraftStatusBar
+          status={draft.status}
+          statusMessage={draft.statusMessage}
+          savedAt={draft.savedAt}
+          hasUnpublishedChanges={draft.hasUnpublishedChanges}
+          hasBeenPublished={draft.hasBeenPublished}
+          liveUrl={draft.formStatus === 'published' && draft.slug ? `/f/${draft.slug}` : null}
+          onDiscard={handleDiscard}
+          onReload={draft.reload}
+        />
+      </div>
 
       <PublishModal
         isOpen={publishModalOpen}
         onClose={() => setPublishModalOpen(false)}
         onConfirm={handlePublishConfirm}
-        isPublishing={publishMutation.isPending}
+        isPublishing={draft.isPublishing}
+        currentVisibility={
+          draft.hasBeenPublished ? (form.visibility === 'public' ? 'public' : 'unlisted') : undefined
+        }
       />
     </>
   );

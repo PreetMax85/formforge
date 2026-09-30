@@ -4,6 +4,20 @@ import { FORM_THEMES } from './forms.schemas';
 
 export const MAX_DRAFT_FIELDS = 50;
 
+/**
+ * Longest text a draft accepts, per input. The builder and settings inputs
+ * use these as `maxLength`, so nobody can type what the save would reject.
+ */
+export const DRAFT_TEXT_LIMITS = {
+  label:            500,
+  placeholder:      500,
+  fieldDescription: 1000,
+  title:            255,
+  description:      1000,
+  thankYouTitle:    255,
+  thankYouMessage:  1000,
+} as const;
+
 const CHOICE_TYPES = new Set(['single_select', 'multi_select', 'dropdown']);
 
 // Shape only. Empty labels and titles are allowed so autosave never fails
@@ -11,20 +25,20 @@ const CHOICE_TYPES = new Set(['single_select', 'multi_select', 'dropdown']);
 export const DraftFieldSchema = z.object({
   id:          z.string().uuid(),
   type:        FieldTypeEnum,
-  label:       z.string().max(500),
-  placeholder: z.string().max(500).nullable(),
-  description: z.string().max(1000).nullable(),
+  label:       z.string().max(DRAFT_TEXT_LIMITS.label),
+  placeholder: z.string().max(DRAFT_TEXT_LIMITS.placeholder).nullable(),
+  description: z.string().max(DRAFT_TEXT_LIMITS.fieldDescription).nullable(),
   required:    z.boolean(),
   config:      z.record(z.string(), z.unknown()),
   conditions:  ConditionalLogicSchema.nullable(),
 });
 
 export const DraftContentSchema = z.object({
-  title:           z.string().max(255),
-  description:     z.string().max(1000).nullable(),
+  title:           z.string().max(DRAFT_TEXT_LIMITS.title),
+  description:     z.string().max(DRAFT_TEXT_LIMITS.description).nullable(),
   theme:           z.enum(FORM_THEMES),
-  thankYouTitle:   z.string().max(255).nullable(),
-  thankYouMessage: z.string().max(1000).nullable(),
+  thankYouTitle:   z.string().max(DRAFT_TEXT_LIMITS.thankYouTitle).nullable(),
+  thankYouMessage: z.string().max(DRAFT_TEXT_LIMITS.thankYouMessage).nullable(),
   fields:          z.array(DraftFieldSchema).max(MAX_DRAFT_FIELDS),
 }).superRefine((content, ctx) => {
   const ids = new Set<string>();

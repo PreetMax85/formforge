@@ -1,13 +1,16 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { trpc } from '~/trpc/client';
-import { FORM_THEMES, THEME_META } from '@repo/shared';
+import { DRAFT_TEXT_LIMITS, FORM_THEMES, THEME_META } from '@repo/shared';
+import type { DraftContent } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
 import LoadingScreen from '~/components/shared/LoadingScreen';
 import { useDelayedLoading } from '~/lib/hooks/useDelayedLoading';
 import { toast } from 'sonner';
+import { useDraft } from '~/lib/draft/useDraft';
+import type { SaveStatus } from '~/lib/draft/saveController';
 
 /* ── Shared input styles ──────────────────────────────────────────── */
 const INPUT: CSSProperties = {
@@ -160,6 +163,50 @@ function Toggle({
   );
 }
 
+/* ── Draft helper text ────────────────────────────────────────────── */
+/** One muted line under a section that edits draft content. */
+function DraftNote() {
+  return (
+    <p
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        fontSize:   '11px',
+        color:      '#4b5563',
+        lineHeight: 1.4,
+        marginTop:  '12px',
+      }}
+    >
+      Changes here go live when you publish.
+    </p>
+  );
+}
+
+/** The five content fields this page edits, as the form inputs hold them. */
+interface SettingsContent {
+  title:           string;
+  description:     string;
+  theme:           string;
+  thankYouTitle:   string;
+  thankYouMessage: string;
+}
+
+/** Turns a draft's content into the strings the inputs hold (null becomes ''). */
+function toSettingsContent(c: DraftContent): SettingsContent {
+  return {
+    title:           c.title,
+    description:     c.description ?? '',
+    theme:           c.theme,
+    thankYouTitle:   c.thankYouTitle ?? '',
+    thankYouMessage: c.thankYouMessage ?? '',
+  };
+}
+
+/** Shown when a draft save did not finish and the hook has no message of its own. */
+const SAVE_FALLBACK: Partial<Record<SaveStatus, string>> = {
+  conflict: 'This form was changed in another tab. Reload to see the latest.',
+  offline:  "You're offline. Your changes are kept here and will save when you reconnect.",
+};
+
 /* ── Page ─────────────────────────────────────────────────────────── */
 export default function FormSettingsPage({
   params,
@@ -170,6 +217,17 @@ export default function FormSettingsPage({
 
   const formQuery = trpc.forms.byId.useQuery({ id: formId });
   const form = formQuery.data?.data;
+
+  // Title, description, theme and the thank-you screen live in the draft;
+  // forms.update only takes the operational settings.
+  const draft = useDraft(formId);
+  // The latest hook state, for reading after an await (a closure would be stale).
+  const draftRef = useRef(draft);
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  // The content values last known to be in the draft. Only inputs that differ
+  // from this are written back, so an untouched field can never overwrite a
+  // newer edit made elsewhere.
+  const savedContentRef = useRef<SettingsContent | null>(null);
 
   /* ── Local form state ────────────────────────────────────────── */
   const [title,           setTitle]           = useState('');
@@ -185,19 +243,22 @@ export default function FormSettingsPage({
   const [expiresAt,       setExpiresAt]       = useState('');
   const [isDirty,         setIsDirty]         = useState(false);
 
-  /* Hydrate from server data once */
+  /* Hydrate once, when both the form and its draft have loaded. */
   const [hydrated, setHydrated] = useState(false);
+  const draftContent = draft.content;
   useEffect(() => {
-    if (form && !hydrated) {
-      setTitle(form.title ?? '');
-      setDescription(form.description ?? '');
+    if (form && draftContent && !hydrated) {
+      const content = toSettingsContent(draftContent);
+      savedContentRef.current = content;
+      setTitle(content.title);
+      setDescription(content.description);
       setSlug((form.slug ?? '').toLowerCase());
-      setTheme(form.theme ?? 'default');
+      setTheme(content.theme);
       setVisibility((form.visibility as 'public' | 'unlisted') ?? 'unlisted');
       setShowProgressBar(form.showProgressBar ?? true);
       setNotifyCreator(form.notifyCreator ?? true);
-      setThankYouTitle(form.thankYouTitle ?? '');
-      setThankYouMessage(form.thankYouMessage ?? '');
+      setThankYouTitle(content.thankYouTitle);
+      setThankYouMessage(content.thankYouMessage);
       setMaxResponses(form.maxResponses != null ? String(form.maxResponses) : '');
       setExpiresAt(
         form.expiresAt
@@ -206,7 +267,7 @@ export default function FormSettingsPage({
       );
       setHydrated(true);
     }
-  }, [form, hydrated]);
+  }, [form, draftContent, hydrated]);
 
   /* Mark dirty on any change */
   function markDirty() { setIsDirty(true); }
@@ -217,44 +278,70 @@ export default function FormSettingsPage({
     onSuccess: () => {
       setIsDirty(false);
       void utils.forms.byId.invalidate({ id: formId });
+      void utils.forms.myForms.invalidate();
       toast.success('Settings saved.');
     },
     onError: (err) => toast.error(err.message),
   });
 
-  function handleSave() {
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const saveBusy = isSavingDraft || updateMutation.isPending;
+
+  /** Saves the draft content first, then the operational settings. */
+  async function handleSave() {
+    if (saveBusy) return;
+    const base = savedContentRef.current;
+    if (!base) return; // not hydrated yet: nothing on screen to save
+    const edited: SettingsContent = { title, description, theme, thankYouTitle, thankYouMessage };
+    const changed = (Object.keys(edited) as (keyof SettingsContent)[])
+      .some((key) => edited[key] !== base[key]);
+
+    if (changed) {
+      // Only the inputs the user changed go into the draft, so an untouched
+      // field never overwrites the draft's current value.
+      draft.update((c) => ({
+        ...c,
+        ...(edited.title !== base.title ? { title: edited.title } : {}),
+        ...(edited.description !== base.description
+          ? { description: edited.description || null } : {}),
+        ...(edited.theme !== base.theme
+          ? { theme: edited.theme as DraftContent['theme'] } : {}),
+        ...(edited.thankYouTitle !== base.thankYouTitle
+          ? { thankYouTitle: edited.thankYouTitle || null } : {}),
+        ...(edited.thankYouMessage !== base.thankYouMessage
+          ? { thankYouMessage: edited.thankYouMessage || null } : {}),
+      }));
+      setIsSavingDraft(true);
+      let flushed: SaveStatus;
+      try {
+        flushed = await draft.flushNow();
+      } finally {
+        setIsSavingDraft(false);
+      }
+      if (flushed !== 'saved') {
+        toast.error(draftRef.current.statusMessage ?? SAVE_FALLBACK[flushed] ?? "Couldn't save.");
+        return;
+      }
+      savedContentRef.current = edited;
+    }
+
     updateMutation.mutate({
       id:             formId,
-      title:          title          || undefined,
-      description:    description    || undefined,
       slug:           slug.length >= 3 ? slug.toLowerCase() : undefined,
-      theme:          theme          as typeof FORM_THEMES[number],
       visibility,
       showProgressBar,
       notifyCreator,
-      thankYouTitle:   thankYouTitle  || undefined,
-      thankYouMessage: thankYouMessage || undefined,
       maxResponses:    maxResponses   ? parseInt(maxResponses, 10) : undefined,
       expiresAt:       expiresAt      ? new Date(expiresAt).toISOString() : undefined,
     });
   }
 
-  const showLoading = useDelayedLoading(formQuery.isLoading);
+  // A draft that has not arrived yet, without an error, is still loading, not missing.
+  const loading = formQuery.isLoading || draft.isLoading || (draft.content === null && !draft.error);
+  const showLoading = useDelayedLoading(loading);
 
-  /* ── 4-state pattern ─────────────────────────────────────────── */
-  if (formQuery.error) {
-    return (
-      <div
-        className="flex items-center gap-2"
-        style={{ padding: '24px', color: '#ef4444', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px' }}
-      >
-        <AlertCircle size={14} />
-        {formQuery.error.message}
-      </div>
-    );
-  }
-
-  if (formQuery.isLoading) {
+  /* ── 4-state pattern: loading, error, empty, success ─────────── */
+  if (loading) {
     if (!showLoading) return null;
     return (
       <div style={{ padding: '24px' }}>
@@ -263,7 +350,20 @@ export default function FormSettingsPage({
     );
   }
 
-  if (!form) {
+  const loadError = formQuery.error?.message ?? (draft.content === null ? draft.error : null);
+  if (loadError) {
+    return (
+      <div
+        className="flex items-center gap-2"
+        style={{ padding: '24px', color: '#ef4444', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px' }}
+      >
+        <AlertCircle size={14} />
+        {loadError}
+      </div>
+    );
+  }
+
+  if (!form || !draft.content) {
     return (
       <div
         style={{
@@ -288,6 +388,7 @@ export default function FormSettingsPage({
           <input
             style={INPUT}
             value={title}
+            maxLength={DRAFT_TEXT_LIMITS.title}
             onChange={(e) => { setTitle(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -299,6 +400,7 @@ export default function FormSettingsPage({
           <textarea
             style={{ ...INPUT, minHeight: '80px', resize: 'vertical' }}
             value={description}
+            maxLength={DRAFT_TEXT_LIMITS.description}
             onChange={(e) => { setDescription(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -335,6 +437,7 @@ export default function FormSettingsPage({
             />
           </div>
         </FieldRow>
+        <DraftNote />
       </Section>
 
       {/* ── Appearance ───────────────────────────────────────────── */}
@@ -386,6 +489,7 @@ export default function FormSettingsPage({
             })}
           </div>
         </FieldRow>
+        <DraftNote />
 
         <FieldRow label="Visibility" hint="Public forms appear on the Explore page.">
           <div className="flex gap-2">
@@ -461,6 +565,7 @@ export default function FormSettingsPage({
           <input
             style={INPUT}
             value={thankYouTitle}
+            maxLength={DRAFT_TEXT_LIMITS.thankYouTitle}
             onChange={(e) => { setThankYouTitle(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -472,12 +577,14 @@ export default function FormSettingsPage({
           <textarea
             style={{ ...INPUT, minHeight: '80px', resize: 'vertical' }}
             value={thankYouMessage}
+            maxLength={DRAFT_TEXT_LIMITS.thankYouMessage}
             onChange={(e) => { setThankYouMessage(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
             placeholder="Your response has been recorded."
           />
         </FieldRow>
+        <DraftNote />
       </Section>
 
       {/* ── Save bar ─────────────────────────────────────────────── */}
@@ -518,23 +625,23 @@ export default function FormSettingsPage({
 
         <button
           onClick={handleSave}
-          disabled={!isDirty || updateMutation.isPending}
+          disabled={!isDirty || saveBusy}
           className="flex items-center gap-2"
           style={{
             fontFamily:  "'JetBrains Mono', monospace",
             fontSize:    '12px',
             fontWeight:  700,
             letterSpacing:'0.06em',
-            color:       !isDirty || updateMutation.isPending ? '#4b5563' : '#0e0e0e',
-            background:  !isDirty || updateMutation.isPending ? '#2a2a2a' : '#569cd6',
+            color:       !isDirty || saveBusy ? '#4b5563' : '#0e0e0e',
+            background:  !isDirty || saveBusy ? '#2a2a2a' : '#569cd6',
             border:      '1px solid #569cd6',
             padding:     '7px 20px',
-            cursor:      !isDirty || updateMutation.isPending ? 'not-allowed' : 'pointer',
+            cursor:      !isDirty || saveBusy ? 'not-allowed' : 'pointer',
             transition:  'all 0.15s',
           }}
         >
           <Save size={12} />
-          {updateMutation.isPending ? 'SAVING...' : 'SAVE SETTINGS'}
+          {saveBusy ? 'SAVING...' : 'SAVE SETTINGS'}
         </button>
       </div>
     </div>

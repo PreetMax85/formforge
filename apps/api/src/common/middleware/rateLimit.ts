@@ -8,6 +8,9 @@ import type { Request } from 'express';
 // bounced active visitors to /login and then refused the login as well.
 // viewLimiter is a separate, more lenient limiter for view-count
 // increments so analytics aren't skewed by the strict submission cap.
+// draftSaveLimiter gives the builder's autosave its own budget: a long
+// editing session saves every few seconds, and counting those against
+// globalLimiter's 200 starved refresh, publish and page loads from that IP.
 
 /**
  * True when the request came from our own Next.js server over a Vercel
@@ -26,10 +29,21 @@ export function isServiceBindingCall(req: Pick<Request, 'headers'>): boolean {
   return host.endsWith('.services.vercel-infra.com');
 }
 
+/** The tRPC path the builder's autosave posts to, un-batched. */
+export const DRAFT_SAVE_PATH = '/trpc/drafts.save';
+
+/**
+ * True for the builder's autosave request, which draftSaveLimiter counts
+ * instead of globalLimiter.
+ */
+export function isDraftSaveCall(req: Pick<Request, 'path'>): boolean {
+  return req.path === DRAFT_SAVE_PATH;
+}
+
 export const globalLimiter = rateLimit({
   windowMs:        15 * 60 * 1000,
   max:             200,
-  skip:            isServiceBindingCall,
+  skip:            (req: Request): boolean => isServiceBindingCall(req) || isDraftSaveCall(req),
   standardHeaders: true,
   legacyHeaders:   false,
   message:         { success: false, error: 'Too many requests. Please try again later.' },
@@ -62,6 +76,16 @@ export const submissionLimiter = rateLimit({
 export const viewLimiter = rateLimit({
   windowMs:        15 * 60 * 1000,
   max:             60,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  message:         { success: false, error: 'Too many requests. Please try again later.' },
+});
+
+// Autosave: at most one save per 5 s while typing is 180 per window, so 600
+// leaves room for several tabs and for flushes on blur, publish and leaving.
+export const draftSaveLimiter = rateLimit({
+  windowMs:        15 * 60 * 1000,
+  max:             600,
   standardHeaders: true,
   legacyHeaders:   false,
   message:         { success: false, error: 'Too many requests. Please try again later.' },

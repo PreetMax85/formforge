@@ -21,6 +21,8 @@ import {
   passwordResetLimiter,
   submissionLimiter,
   viewLimiter,
+  draftSaveLimiter,
+  DRAFT_SAVE_PATH,
 } from './common/middleware/rateLimit';
 import { optionalAuth } from './common/middleware/optionalAuth';
 import { asyncHandler } from './common/utils/asyncHandler';
@@ -88,10 +90,25 @@ export function createApp(): express.Application {
   app.use('/api/v1/forms/:formSlug/view', viewLimiter);
   app.use('/trpc/forms.incrementView',     viewLimiter);
 
+  // Builder autosave — its own budget in place of globalLimiter (which skips
+  // this path), so a long editing session cannot starve refresh, publish and
+  // page loads from the same IP.
+  app.use(DRAFT_SAVE_PATH, draftSaveLimiter);
+
   app.use(optionalAuth);
 
   // tRPC internal endpoint
-  app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext }));
+  app.use('/trpc', createExpressMiddleware({
+    router: appRouter,
+    createContext,
+    // Anything that is not a translated ApiError reaches the client as a bare
+    // 500, and was logged nowhere. 4xx errors are expected outcomes (wrong
+    // password, missing form, stale draft) and stay out of the error log.
+    onError: ({ error, path }) => {
+      if (error.code !== 'INTERNAL_SERVER_ERROR') return;
+      logger.error({ path, err: error.cause ?? error }, 'Unexpected tRPC error');
+    },
+  }));
 
   // OpenAPI REST adapter
   app.use('/api/v1', createOpenApiExpressMiddleware({ router: appRouter, createContext }));
