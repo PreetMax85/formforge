@@ -460,7 +460,8 @@ export default function BuilderPage() {
               onPlay={handlePlay}
               onPublish={handlePublish}
               isPublishing={draft.isPublishing}
-              hasUnsavedChanges={draft.status !== 'saved'}
+              // Leaving saves pending edits, so warn only when that save cannot succeed.
+              hasUnsavedChanges={draft.status === 'offline' || draft.status === 'error' || draft.status === 'conflict'}
               publishLabel={draft.hasUnpublishedChanges ? 'PUBLISH CHANGES' : 'PUBLISH'}
             />
           }
