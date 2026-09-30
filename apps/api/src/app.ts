@@ -21,6 +21,8 @@ import {
   passwordResetLimiter,
   submissionLimiter,
   viewLimiter,
+  draftSaveLimiter,
+  DRAFT_SAVE_PATH,
 } from './common/middleware/rateLimit';
 import { optionalAuth } from './common/middleware/optionalAuth';
 import { asyncHandler } from './common/utils/asyncHandler';
@@ -87,6 +89,11 @@ export function createApp(): express.Application {
   // on completion rate = responses/views).
   app.use('/api/v1/forms/:formSlug/view', viewLimiter);
   app.use('/trpc/forms.incrementView',     viewLimiter);
+
+  // Builder autosave — its own budget in place of globalLimiter (which skips
+  // this path), so a long editing session cannot starve refresh, publish and
+  // page loads from the same IP.
+  app.use(DRAFT_SAVE_PATH, draftSaveLimiter);
 
   app.use(optionalAuth);
 

@@ -57,3 +57,28 @@ describe('auth rate limits', () => {
     expect(await login()).not.toBe(429);
   });
 });
+
+describe('autosave rate limit', () => {
+  /** POST with no access token: answered 401 without touching the database. */
+  const saveDraft = () =>
+    fetch(`${baseUrl}/trpc/drafts.save`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    '{}',
+    });
+  const globalRemaining = async () =>
+    Number((await fetch(`${baseUrl}/health`)).headers.get('ratelimit-remaining'));
+
+  it('gives drafts.save its own budget of 600 per window', async () => {
+    const res = await saveDraft();
+    expect(res.status).not.toBe(429);
+    expect(res.headers.get('ratelimit-limit')).toBe('600');
+  });
+
+  it('does not spend the global budget, so typing cannot lock out refresh, publish and page loads', async () => {
+    const before = await globalRemaining();
+    for (let i = 0; i < 5; i++) await saveDraft();
+    // Only the second /health request itself is counted.
+    expect(await globalRemaining()).toBe(before - 1);
+  });
+});
