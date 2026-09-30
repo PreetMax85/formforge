@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Trash2, GitBranch } from 'lucide-react';
+import { DRAFT_TEXT_LIMITS } from '@repo/shared';
 import { FIELD_TYPE_META } from './FieldCard';
 import type { Field } from '~/lib/types/field';
 
@@ -217,6 +218,7 @@ export function FieldInspector({ field, allFields, onChange, onDelete }: FieldIn
         <input
           style={INPUT_STYLE}
           value={field.label}
+          maxLength={DRAFT_TEXT_LIMITS.label}
           onChange={(e) => onChange({ label: e.target.value })}
           onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
           onBlur={(e) => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -230,6 +232,7 @@ export function FieldInspector({ field, allFields, onChange, onDelete }: FieldIn
           <input
             style={INPUT_STYLE}
             value={field.placeholder ?? ''}
+            maxLength={DRAFT_TEXT_LIMITS.placeholder}
             onChange={(e) => onChange({ placeholder: e.target.value })}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e) => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -247,6 +250,7 @@ export function FieldInspector({ field, allFields, onChange, onDelete }: FieldIn
             minHeight: '52px',
           }}
           value={field.description ?? ''}
+          maxLength={DRAFT_TEXT_LIMITS.fieldDescription}
           onChange={(e) => onChange({ description: e.target.value })}
           onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
           onBlur={(e) => (e.currentTarget.style.borderColor = '#3c3c3c')}

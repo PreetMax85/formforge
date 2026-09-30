@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { trpc } from '~/trpc/client';
-import { FORM_THEMES, THEME_META } from '@repo/shared';
+import { DRAFT_TEXT_LIMITS, FORM_THEMES, THEME_META } from '@repo/shared';
 import type { DraftContent } from '@repo/shared';
 import { Save, AlertCircle } from 'lucide-react';
 import LoadingScreen from '~/components/shared/LoadingScreen';
@@ -388,6 +388,7 @@ export default function FormSettingsPage({
           <input
             style={INPUT}
             value={title}
+            maxLength={DRAFT_TEXT_LIMITS.title}
             onChange={(e) => { setTitle(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -399,6 +400,7 @@ export default function FormSettingsPage({
           <textarea
             style={{ ...INPUT, minHeight: '80px', resize: 'vertical' }}
             value={description}
+            maxLength={DRAFT_TEXT_LIMITS.description}
             onChange={(e) => { setDescription(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -563,6 +565,7 @@ export default function FormSettingsPage({
           <input
             style={INPUT}
             value={thankYouTitle}
+            maxLength={DRAFT_TEXT_LIMITS.thankYouTitle}
             onChange={(e) => { setThankYouTitle(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}
@@ -574,6 +577,7 @@ export default function FormSettingsPage({
           <textarea
             style={{ ...INPUT, minHeight: '80px', resize: 'vertical' }}
             value={thankYouMessage}
+            maxLength={DRAFT_TEXT_LIMITS.thankYouMessage}
             onChange={(e) => { setThankYouMessage(e.target.value); markDirty(); }}
             onFocus={(e) => (e.currentTarget.style.borderColor = '#569cd6')}
             onBlur={(e)  => (e.currentTarget.style.borderColor = '#3c3c3c')}

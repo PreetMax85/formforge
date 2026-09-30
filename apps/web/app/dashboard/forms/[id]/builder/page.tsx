@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
-import { findPublishProblems, type DraftField } from '@repo/shared';
+import { findPublishProblems, MAX_DRAFT_FIELDS, type DraftField } from '@repo/shared';
 
 import { trpc } from '~/trpc/client';
 import { GameEngineShell } from '~/components/engine/GameEngineShell';
@@ -215,8 +215,15 @@ export default function BuilderPage() {
   /* ── Add field ───────────────────────────────────────────────── */
   // Clicking a palette row and dropping it on the canvas both land here, and
   // both append: the drop position is not used.
+  // A draft holds at most MAX_DRAFT_FIELDS questions; one more would make
+  // every later autosave fail, so stop here and say why.
+  const fieldCount = fields.length;
   const addField = useCallback(
     (type: FieldType) => {
+      if (fieldCount >= MAX_DRAFT_FIELDS) {
+        toast.error(`This form has the maximum of ${MAX_DRAFT_FIELDS} questions.`);
+        return;
+      }
       const label = defaultLabel(type);
       const newField: Field = {
         id: crypto.randomUUID(),
@@ -231,11 +238,13 @@ export default function BuilderPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setFields((prev) => [...prev, { ...newField, order: prev.length }]);
+      // Checked again against the draft itself: two adds can land in one render.
+      setFields((prev) =>
+        prev.length >= MAX_DRAFT_FIELDS ? prev : [...prev, { ...newField, order: prev.length }]);
       setActiveFieldId(newField.id);
       pushLog('info', `Asset "${label}" added to scene`);
     },
-    [formId, setFields]
+    [formId, setFields, fieldCount]
   );
 
   /* ── DnD handlers ────────────────────────────────────────────── */

@@ -1,4 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// The transport reports rejected saves to Sentry by default; these tests
+// inject their own reporter and must not need Sentry initialised.
+vi.mock('@sentry/nextjs', () => ({ captureMessage: vi.fn() }));
+
+import * as Sentry from '@sentry/nextjs';
 import { saveDraftRequest } from './saveDraftRequest';
 
 const content = { title: 'T', description: null, theme: 'default' as const, thankYouTitle: null, thankYouMessage: null, fields: [] };
@@ -50,10 +56,46 @@ describe('saveDraftRequest', () => {
       .resolves.toEqual({ kind: 'network' });
   });
 
-  it('maps 400 to rejected with the server message', async () => {
+  it('maps 400 to rejected with fixed text, never the raw server payload', async () => {
+    const zodJson = JSON.stringify([{ code: 'too_big', maximum: 500, path: ['content', 'fields', 0, 'label'] }]);
+    const fetchImpl = vi.fn(async () => json(400, { error: { message: zodJson } }));
+    const report = vi.fn();
+    const outcome = await saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true, report });
+    expect(outcome).toEqual({ kind: 'rejected', message: "Couldn't save. Undo your last change and try again." });
+  });
+
+  it('reports the raw server message of a 400 for us to see', async () => {
+    const zodJson = JSON.stringify([{ code: 'too_big', maximum: 500, path: ['content', 'fields', 0, 'label'] }]);
+    const fetchImpl = vi.fn(async () => json(400, { error: { message: zodJson } }));
+    const report = vi.fn();
+    await saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true, report });
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith({ formId: 'f', baseRevision: 4, status: 400, serverMessage: zodJson });
+  });
+
+  it('reports a 400 to Sentry when no reporter is injected', async () => {
     const fetchImpl = vi.fn(async () => json(400, { error: { message: 'Invalid draft' } }));
-    await expect(saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true }))
-      .resolves.toEqual({ kind: 'rejected', message: 'Invalid draft' });
+    await saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('Draft save rejected', {
+      level: 'warning',
+      extra: { formId: 'f', baseRevision: 4, status: 400, serverMessage: 'Invalid draft' },
+    });
+  });
+
+  it('still rejects with the fixed text when the reporter itself throws', async () => {
+    const fetchImpl = vi.fn(async () => json(400, { error: { message: 'Invalid draft' } }));
+    const report = vi.fn(() => { throw new Error('sentry down'); });
+    await expect(saveDraftRequest('f', content, 4, { fetchImpl, token: () => 't', refresh: async () => true, report }))
+      .resolves.toEqual({ kind: 'rejected', message: "Couldn't save. Undo your last change and try again." });
+  });
+
+  it('does not report saves that succeed or fail for other reasons', async () => {
+    const report = vi.fn();
+    const deps = { token: () => 't', refresh: async () => true, report };
+    await saveDraftRequest('f', content, 4, { ...deps, fetchImpl: vi.fn(async () => json(200, { result: { data: { success: true, data: { revision: 5 } } } })) });
+    await saveDraftRequest('f', content, 4, { ...deps, fetchImpl: vi.fn(async () => json(409, { error: { message: 'x' } })) });
+    await saveDraftRequest('f', content, 4, { ...deps, fetchImpl: vi.fn(async () => json(503, {})) });
+    expect(report).not.toHaveBeenCalled();
   });
 
   it('keeps saving after the access token expires mid-session: sends the refreshed token on retry', async () => {
