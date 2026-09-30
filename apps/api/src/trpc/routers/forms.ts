@@ -9,12 +9,12 @@ import {
   updateForm,
   deleteForm,
   archiveForm,
-  publishForm,
   unpublishForm,
   cloneForm,
   exploreForms,
   incrementViewCount,
 } from '../../modules/forms/forms.service';
+import { publishDraft } from '../../modules/drafts/drafts.service';
 
 // Explicit output envelope to avoid z.any()
 const successEnvelope = <T extends z.ZodTypeAny>(dataSchema: T) =>
@@ -160,7 +160,7 @@ const formsRouter = router({
     }),
 
   update: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'PUT', path: '/forms/{id}', tags: ['Forms'], description: 'Update form settings (title, slug, theme, visibility, limits, etc.).' } })
+    .meta({ openapi: { enabled: false, method: 'PUT', path: '/forms/{id}', tags: ['Forms'], description: 'Update operational settings (slug, visibility, limits, notifications).' } })
     .input(UpdateFormSchema)
     .mutation(async ({ input, ctx }) => {
       const { id, ...rest } = input;
@@ -177,10 +177,10 @@ const formsRouter = router({
     }),
 
   publish: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/publish', tags: ['Forms'], description: 'Publish a form with public or unlisted visibility.' } })
+    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/publish', tags: ['Forms'], description: 'Publish the form\'s draft with public or unlisted visibility.' } })
     .input(PublishFormSchema)
     .mutation(async ({ input, ctx }) => {
-      const form = await publishForm(input.id, input.visibility, ctx.user.sub);
+      const form = await publishDraft(input.id, input.visibility, ctx.user.sub);
       return { success: true as const, message: 'Form published', data: form };
     }),
 
@@ -193,7 +193,7 @@ const formsRouter = router({
     }),
 
   clone: protectedProcedure
-    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/clone', tags: ['Forms'], description: 'Deep-clone a form into a new draft. Copies all fields and conditional-logic rules with remapped IDs.' } })
+    .meta({ openapi: { enabled: false, method: 'POST', path: '/forms/{id}/clone', tags: ['Forms'], description: 'Clone the working draft of a form into a new, never-published form. Questions and conditional-logic rules get new IDs.' } })
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
       const cloned = await cloneForm(input.id, ctx.user.sub);

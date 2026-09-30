@@ -16,15 +16,10 @@ export const CreateFormSchema = z.object({
 
 export const UpdateFormSchema = z.object({
   id:              z.string().uuid(),
-  title:           z.string().min(1).max(255).optional(),
-  description:     z.string().max(1000).optional(),
   slug:            z.string().min(3).max(100).regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, hyphens').optional(),
-  theme:           z.enum(FORM_THEMES).optional(),
   visibility:      z.enum(['public', 'unlisted']).optional(),
   notifyCreator:   z.boolean().optional(),
   showProgressBar: z.boolean().optional(),
-  thankYouTitle:   z.string().max(255).optional(),
-  thankYouMessage: z.string().max(1000).optional(),
   maxResponses:    z.number().int().positive().optional(),
   expiresAt:       z.string().datetime().optional(),
 });

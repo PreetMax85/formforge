@@ -2,14 +2,14 @@ import { router } from './trpc';
 import { generateOpenApiDocument } from 'trpc-to-openapi';
 import { authRouter } from './routers/auth';
 import { formsRouter } from './routers/forms';
-import { fieldsRouter } from './routers/fields';
+import { draftsRouter } from './routers/drafts';
 import { responsesRouter } from './routers/responses';
 import { analyticsRouter } from './routers/analytics';
 
 export const appRouter = router({
   auth:      authRouter,
   forms:     formsRouter,
-  fields:    fieldsRouter,
+  drafts:    draftsRouter,
   responses: responsesRouter,
   analytics: analyticsRouter,
 });

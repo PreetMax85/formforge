@@ -12,6 +12,11 @@ import { sendResponseReceived, sendResponseCopy } from '@repo/email';
 // Re-export for backward compatibility — tests import from this module
 export { validateResponseAnswers } from '@repo/shared';
 
+/** How an answer's question is named in the responses view and CSV export. */
+export function answerLabel(label: string, retiredAt: Date | null): string {
+  return retiredAt ? `Removed question: ${label}` : label;
+}
+
 interface SubmitResponseInput {
   formSlug:        string;
   answers:         { fieldId: string; value: string | string[] }[];
@@ -44,7 +49,7 @@ export async function submitResponse(input: SubmitResponseInput) {
   const form = await db.query.forms.findFirst({
     where: eq(forms.slug, input.formSlug),
     with: {
-      fields:  { orderBy: (f, { asc }) => [asc(f.order)] },
+      fields:  { where: (f, { isNull: isNullFn }) => isNullFn(f.retiredAt), orderBy: (f, { asc }) => [asc(f.order)] },
       creator: { columns: { email: true } },
     },
   });
@@ -64,9 +69,16 @@ export async function submitResponse(input: SubmitResponseInput) {
     throw ApiError.unauthorized('Incorrect form password');
   }
 
+  // Keep only answers to live questions of this form. `form.fields` is already
+  // live-only, so answers to removed questions (or to another form's fields)
+  // are dropped silently: a respondent whose page predates a publish still
+  // gets their live answers stored.
+  const liveFieldIds = new Set(form.fields.map(f => f.id));
+  const liveAnswers = input.answers.filter(a => liveFieldIds.has(a.fieldId));
+
   // Build answers map for conditional-logic resolution
   const answersMap: Record<string, string | string[]> = {};
-  for (const a of input.answers) {
+  for (const a of liveAnswers) {
     answersMap[a.fieldId] = a.value;
   }
 
@@ -89,7 +101,7 @@ export async function submitResponse(input: SubmitResponseInput) {
         id: f.id, type: f.type, required: f.required,
         config: f.config as Record<string, unknown>, label: f.label,
       })),
-    input.answers,
+    liveAnswers,
   );
   if (!validation.success) {
     throw ApiError.badRequest(validation.error ?? 'Validation failed');
@@ -106,7 +118,7 @@ export async function submitResponse(input: SubmitResponseInput) {
   }
 
   // Spam cluster detection
-  const spamCheck = await detectSpamSubmissionCluster(form.id, input);
+  const spamCheck = await detectSpamSubmissionCluster(form.id, { ...input, answers: liveAnswers });
   if (spamCheck.isSpam && spamCheck.confidence > 0.8) {
     logger.warn({ formId: form.id, reason: spamCheck.reason }, 'Spam cluster detected');
     return { success: true, message: 'Response submitted successfully.' };
@@ -161,9 +173,9 @@ export async function submitResponse(input: SubmitResponseInput) {
       return { duplicate: false, response: null, capReached: true };
     }
 
-    if (input.answers.length > 0) {
+    if (liveAnswers.length > 0) {
       await tx.insert(responseAnswers).values(
-        input.answers.map(a => ({
+        liveAnswers.map(a => ({
           responseId: response.id,
           fieldId:    a.fieldId,
           value: Array.isArray(a.value) ? a.value : String(a.value),
@@ -196,7 +208,7 @@ export async function submitResponse(input: SubmitResponseInput) {
     });
   }
 
-  const formattedAnswers = input.answers.map(a => ({
+  const formattedAnswers = liveAnswers.map(a => ({
     label: form.fields.find(f => f.id === a.fieldId)?.label ?? a.fieldId,
     value: Array.isArray(a.value) ? a.value.join(', ') : a.value,
   }));
@@ -267,10 +279,10 @@ export async function listResponses(
   const fieldLabels = new Map<string, string>();
   if (fieldIds.length > 0) {
     const fieldRows = await db
-      .select({ id: fields.id, label: fields.label })
+      .select({ id: fields.id, label: fields.label, retiredAt: fields.retiredAt })
       .from(fields)
       .where(inArray(fields.id, fieldIds));
-    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+    for (const f of fieldRows) fieldLabels.set(f.id, answerLabel(f.label, f.retiredAt));
   }
 
   const answersByResponseId = new Map<string, typeof responseAnswers.$inferSelect[]>();
@@ -313,10 +325,10 @@ export async function getResponseById(responseId: string, requesterId: string) {
   const fieldLabels = new Map<string, string>();
   if (fieldIds.length > 0) {
     const fieldRows = await db
-      .select({ id: fields.id, label: fields.label })
+      .select({ id: fields.id, label: fields.label, retiredAt: fields.retiredAt })
       .from(fields)
       .where(inArray(fields.id, fieldIds));
-    for (const f of fieldRows) fieldLabels.set(f.id, f.label);
+    for (const f of fieldRows) fieldLabels.set(f.id, answerLabel(f.label, f.retiredAt));
   }
 
   return {
