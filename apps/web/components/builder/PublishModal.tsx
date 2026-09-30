@@ -12,6 +12,11 @@ interface PublishModalProps {
   onClose: () => void;
   onConfirm: (visibility: Visibility) => void;
   isPublishing: boolean;
+  /**
+   * The visibility the form is live with, once it has been published.
+   * Leave it out for a first publish, which starts on Unlisted.
+   */
+  currentVisibility?: Visibility;
 }
 
 /**
@@ -19,8 +24,19 @@ interface PublishModalProps {
  * Two visibility options: Public (Explore page) vs Unlisted (link only).
  * Radix Dialog supplies the dialog role, Esc to close, and focus trap/restore.
  */
-export function PublishModal({ isOpen, onClose, onConfirm, isPublishing }: PublishModalProps) {
-  const [visibility, setVisibility] = useState<Visibility>('unlisted');
+export function PublishModal({ isOpen, onClose, onConfirm, isPublishing, currentVisibility }: PublishModalProps) {
+  const initialVisibility: Visibility = currentVisibility ?? 'unlisted';
+  const [visibility, setVisibility] = useState<Visibility>(initialVisibility);
+
+  // Start from the form's own visibility every time the modal opens. It used
+  // to start on Unlisted, so "Publish changes" on a Public form delisted it
+  // unless the creator noticed. Set during render, not in an effect, so the
+  // first frame of the modal already shows the right option.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setVisibility(initialVisibility);
+  }
 
   // Radix returns focus to a <Dialog.Trigger> on close, but this modal is
   // opened by the page (after its unsaved-changes check), so there is none.

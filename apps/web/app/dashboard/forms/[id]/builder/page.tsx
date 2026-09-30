@@ -530,6 +530,9 @@ export default function BuilderPage() {
         onClose={() => setPublishModalOpen(false)}
         onConfirm={handlePublishConfirm}
         isPublishing={draft.isPublishing}
+        currentVisibility={
+          draft.hasBeenPublished ? (form.visibility === 'public' ? 'public' : 'unlisted') : undefined
+        }
       />
     </>
   );
