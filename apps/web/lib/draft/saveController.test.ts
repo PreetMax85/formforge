@@ -42,7 +42,8 @@ describe('DraftSaveController', () => {
     await vi.advanceTimersByTimeAsync(800);
     expect(calls).toHaveLength(1);
     calls[0]!.resolve({ kind: 'saved', revision: 2 });
-    await vi.advanceTimersByTimeAsync(0);
+    // The follow-up goes back through the debounce rather than starting at once.
+    await vi.advanceTimersByTimeAsync(800);
     expect(calls).toHaveLength(2);
     expect(calls[1]).toEqual(expect.objectContaining({ content: 'two', base: 2 }));
     calls[1]!.resolve({ kind: 'saved', revision: 3 });
@@ -221,5 +222,80 @@ describe('DraftSaveController', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(calls).toHaveLength(2);
     expect(calls[1]).toEqual(expect.objectContaining({ content: 'yz' }));
+  });
+  describe('cadence while edits keep arriving', () => {
+    /** A controller whose saves each take 300 ms, like a real round trip. */
+    function slowSetup() {
+      const started: number[] = [];
+      let revision = 1;
+      const controller = new DraftSaveController<string>({
+        initialRevision: 1,
+        save: () => new Promise<SaveOutcome>((resolve) => {
+          started.push(Date.now());
+          setTimeout(() => { revision += 1; resolve({ kind: 'saved', revision }); }, 300);
+        }),
+        onChange: () => {},
+      });
+      return { controller, started };
+    }
+
+    it('saves about once per 5 s during 60 s of typing, not once per round trip', async () => {
+      const { controller, started } = slowSetup();
+      for (let t = 0; t < 60_000; t += 150) {
+        controller.edit(`v${t}`);
+        await vi.advanceTimersByTimeAsync(150);
+      }
+      expect(started.length).toBeGreaterThanOrEqual(11);
+      expect(started.length).toBeLessThanOrEqual(13);
+    });
+
+    it('waits for the debounce, as unsaved, when a save finishes with newer edits pending', async () => {
+      const { controller, calls } = setup();
+      controller.edit('one');
+      await vi.advanceTimersByTimeAsync(800);
+      controller.edit('two');
+      calls[0]!.resolve({ kind: 'saved', revision: 2 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(controller.getStatus()).toBe('unsaved');
+      expect(calls).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(799);
+      expect(calls).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(calls).toHaveLength(2);
+      expect(calls[1]).toEqual(expect.objectContaining({ content: 'two', base: 2 }));
+    });
+
+    it('flush during continuous typing still saves promptly and resolves', async () => {
+      const { controller, started } = slowSetup();
+      for (let t = 0; t < 5100; t += 150) {
+        controller.edit(`v${t}`);
+        await vi.advanceTimersByTimeAsync(150);
+      }
+      // The max-wait save started at 5000 ms and is in flight; one newer edit is pending.
+      expect(started).toHaveLength(1);
+      controller.edit('last');
+      let resolved: SaveStatus | null = null;
+      void controller.flush().then((s) => { resolved = s; });
+      // In-flight save ends within 300 ms, the follow-up starts at once and takes 300 ms more.
+      await vi.advanceTimersByTimeAsync(600);
+      expect(started).toHaveLength(2);
+      expect(resolved).toBe('saved');
+      expect(controller.hasPendingChanges()).toBe(false);
+    });
+
+    it('flush while the follow-up save is waiting on its debounce saves at once', async () => {
+      const { controller, calls } = setup();
+      controller.edit('one');
+      await vi.advanceTimersByTimeAsync(800);
+      controller.edit('two');
+      calls[0]!.resolve({ kind: 'saved', revision: 2 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(calls).toHaveLength(1);
+      const done = controller.flush();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(calls).toHaveLength(2);
+      calls[1]!.resolve({ kind: 'saved', revision: 3 });
+      await expect(done).resolves.toBe('saved');
+    });
   });
 });

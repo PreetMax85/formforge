@@ -18,7 +18,8 @@ export interface DraftSaveControllerOptions<C> {
 
 /**
  * Decides when a draft is saved: 800 ms after the last edit (at least every
- * 5 s while edits keep coming), one request at a time, retrying network
+ * 5 s while edits keep coming, and at most once per 5 s however fast saves
+ * return), one request at a time, retrying network
  * failures with backoff, and stopping for good on a conflict. It knows
  * nothing about React or HTTP; `save` does the request.
  */
@@ -139,8 +140,19 @@ export class DraftSaveController<C> {
         this.revision = outcome.revision;
         this.retryDelay = this.opts.retryBaseMs;
         if (this.dirty) {
+          // Edits arrived during the save. Go back through the scheduler with a
+          // fresh max-wait window: saving again at once made the cadence one
+          // request per round trip while someone types, which spent the API's
+          // rate limit in about a minute.
           this.setStatus('unsaved', null);
-          void this.run();
+          if (this.waiters.length > 0) {
+            // flush() is waiting (leaving the page, publishing): save now.
+            this.clearTimer();
+            void this.run();
+            return;
+          }
+          this.firstUnsavedAt = Date.now();
+          this.schedule(this.opts.debounceMs);
           return;
         }
         this.firstUnsavedAt = null;
